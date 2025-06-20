@@ -228,54 +228,51 @@
             };
 
             try {
-                // For demo purposes, we'll simulate the API call
-                // In production, this would call your Flask backend
-                await simulateAPICall(data);
+                // Call the Flask backend API
+                const response = await fetch('http://localhost:5001/api/generate-text', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        recipient: data.recipient,
+                        occasion: data.occasion,
+                        style: data.style,
+                        message: data.message
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+
+                const apiResult = await response.json();
                 
-                // Show result
-                result.classList.add('show');
-                
-            } catch (err) {
-                error.textContent = err.message;
+                if (apiResult.success) {
+                    // Display the generated text
+                    cardContent.innerHTML = `
+                        <div style="background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                            <h4 style="color: #667eea; margin-bottom: 1rem;">Dear ${data.recipient},</h4>
+                            <p style="line-height: 1.6; margin-bottom: 1rem;">${apiResult.generated_text}</p>
+                            ${data.message ? `<p style="line-height: 1.6; margin-bottom: 1rem;"><em>${data.message}</em></p>` : ''}
+                            <p style="line-height: 1.6;">With warmest regards,<br>Good Boy AGI</p>
+                        </div>
+                    `;
+                    
+                    // Show result
+                    result.classList.add('show');
+                } else {
+                    throw new Error(apiResult.error || 'Failed to generate greeting card');
+                }
+            } catch (apiError) {
+                console.error('API Error:', apiError);
+                error.textContent = `Failed to connect to API: ${apiError.message}`;
                 error.style.display = 'block';
             } finally {
                 generateBtn.disabled = false;
                 generateBtn.textContent = 'Generate Greeting Card';
             }
         });
-
-        async function simulateAPICall(data) {
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            // Generate mock response
-            const greetings = {
-                birthday: {
-                    friendly: `Happy Birthday, ${data.recipient}! 🎉 Wishing you a day filled with joy, laughter, and all the things that make you smile. May this year bring you countless blessings and wonderful memories.`,
-                    formal: `Dear ${data.recipient}, On this special day, I extend my warmest birthday wishes to you. May the coming year be filled with success, happiness, and fulfillment.`,
-                    funny: `Happy Birthday, ${data.recipient}! 🎂 Another year older, but definitely not wiser (just kidding!). Here's to another year of questionable life choices and amazing adventures!`,
-                    romantic: `Happy Birthday, my dear ${data.recipient}! 💕 On this special day, I want you to know how much you mean to me. Your love makes every day feel like a celebration.`
-                },
-                anniversary: {
-                    friendly: `Happy Anniversary, ${data.recipient}! 🥂 Here's to another year of love, laughter, and beautiful memories together.`,
-                    formal: `Dear ${data.recipient}, Congratulations on your anniversary. May your love continue to grow stronger with each passing year.`,
-                    funny: `Happy Anniversary, ${data.recipient}! 🎭 Another year of putting up with each other's weird habits. Here's to many more years of love and laughter!`,
-                    romantic: `Happy Anniversary, my love ${data.recipient}! 💖 Every day with you feels like a new beginning. Thank you for being my perfect partner in this beautiful journey.`
-                }
-            };
-
-            const occasionGreetings = greetings[data.occasion] || greetings.birthday;
-            const greeting = occasionGreetings[data.style] || occasionGreetings.friendly;
-
-            cardContent.innerHTML = `
-                <div style="background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
-                    <h4 style="color: #667eea; margin-bottom: 1rem;">Dear ${data.recipient},</h4>
-                    <p style="line-height: 1.6; margin-bottom: 1rem;">${greeting}</p>
-                    ${data.message ? `<p style="line-height: 1.6; margin-bottom: 1rem;"><em>${data.message}</em></p>` : ''}
-                    <p style="line-height: 1.6;">With warmest regards,<br>Good Boy AGI</p>
-                </div>
-            `;
-        }
     </script>
 </body>
 </html> 

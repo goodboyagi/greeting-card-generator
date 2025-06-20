@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 from dotenv import load_dotenv
+from openai import OpenAI
 
 # Load environment variables
 load_dotenv()
@@ -12,6 +13,11 @@ CORS(app)
 # Get API keys from environment variables (secure)
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 HUGGINGFACE_TOKEN = os.getenv('HUGGINGFACE_TOKEN')
+
+# Configure OpenAI
+client = None
+if OPENAI_API_KEY:
+    client = OpenAI(api_key=OPENAI_API_KEY)
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -25,18 +31,44 @@ def health_check():
 
 @app.route('/api/generate-text', methods=['POST'])
 def generate_text():
-    """Generate greeting card text using AI"""
-    if not OPENAI_API_KEY:
+    """Generate greeting card text using OpenAI API"""
+    if not client:
         return jsonify({'error': 'OpenAI API key not configured'}), 500
     
     try:
         data = request.get_json()
-        message = data.get('message', '')
+        recipient = data.get('recipient', '')
+        occasion = data.get('occasion', '')
         style = data.get('style', 'friendly')
+        message = data.get('message', '')
         
-        # Here you would integrate with OpenAI API
-        # For now, return a mock response
-        generated_text = f"Generated greeting for: {message} in {style} style"
+        # Create a detailed prompt for OpenAI
+        prompt = f"""Create a personalized greeting card message for {recipient} for a {occasion} occasion. 
+
+Style: {style}
+Additional personal message from sender: {message if message else 'None'}
+
+Please create a warm, personalized greeting card message that is:
+- Appropriate for the {occasion} occasion
+- Written in a {style} tone
+- Personal and heartfelt
+- Include the recipient's name naturally
+- If there's an additional message from the sender, incorporate it gracefully
+
+Keep the message concise but meaningful (2-3 sentences)."""
+
+        # Call OpenAI API with new format
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a creative greeting card writer who creates personalized, warm, and appropriate messages for various occasions."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=150,
+            temperature=0.7
+        )
+        
+        generated_text = response.choices[0].message.content.strip()
         
         return jsonify({
             'success': True,
@@ -44,6 +76,7 @@ def generate_text():
         })
     
     except Exception as e:
+        print(f"Error generating text: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/styles', methods=['GET'])
@@ -63,4 +96,4 @@ if __name__ == '__main__':
         print("⚠️  Warning: OPENAI_API_KEY not found in environment variables")
         print("   Create a .env file with your API keys for full functionality")
     
-    app.run(debug=True, host='0.0.0.0', port=5000) 
+    app.run(debug=True, host='0.0.0.0', port=5001) 
