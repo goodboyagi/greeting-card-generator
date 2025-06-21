@@ -34,8 +34,10 @@ client = None
 if OPENAI_API_KEY:
     client = OpenAI(api_key=OPENAI_API_KEY)
 
-# Simple usage tracking
-USAGE_FILE = 'usage_stats.json'
+# Always use absolute path for usage stats file
+BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
+USAGE_FILE = os.path.join(BACKEND_DIR, 'usage_stats.json')
+print(f"[INFO] Usage stats file: {USAGE_FILE}")
 
 def load_usage_stats():
     """Load usage statistics from file"""
@@ -43,8 +45,8 @@ def load_usage_stats():
         if os.path.exists(USAGE_FILE):
             with open(USAGE_FILE, 'r') as f:
                 return json.load(f)
-    except:
-        pass
+    except Exception as e:
+        print(f"[ERROR] Failed to load usage stats: {e}")
     return {
         'total_requests': 0,
         'successful_requests': 0,
@@ -59,8 +61,8 @@ def save_usage_stats(stats):
     try:
         with open(USAGE_FILE, 'w') as f:
             json.dump(stats, f, indent=2)
-    except:
-        pass
+    except Exception as e:
+        print(f"[ERROR] Failed to save usage stats: {e}")
 
 def track_request(occasion=None, style=None, success=True):
     """Track API request"""
