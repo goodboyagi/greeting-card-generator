@@ -8,7 +8,17 @@ from openai import OpenAI
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+
+# Configure CORS to allow requests from GitHub Pages and other origins
+CORS(app, origins=[
+    "https://goodboyagi.github.io",
+    "https://goodboyagi.com", 
+    "https://goodboyagi.com/greeting-card-generator",
+    "http://localhost:5000",
+    "http://localhost:3000",
+    "http://127.0.0.1:5000",
+    "http://127.0.0.1:3000"
+], methods=["GET", "POST", "OPTIONS"])
 
 # Get API keys from environment variables (secure)
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
@@ -18,6 +28,14 @@ HUGGINGFACE_TOKEN = os.getenv('HUGGINGFACE_TOKEN')
 client = None
 if OPENAI_API_KEY:
     client = OpenAI(api_key=OPENAI_API_KEY)
+
+@app.route('/api/test', methods=['GET'])
+def test_endpoint():
+    """Simple test endpoint for debugging"""
+    return jsonify({
+        'message': 'API is working!',
+        'timestamp': '2025-06-21'
+    })
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
