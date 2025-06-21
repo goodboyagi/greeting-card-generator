@@ -18,8 +18,11 @@ CORS(app, origins=[
     "https://goodboyagi.com/greeting-card-generator",
     "http://localhost:5000",
     "http://localhost:3000",
+    "http://localhost:8000",
     "http://127.0.0.1:5000",
-    "http://127.0.0.1:3000"
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:8000",
+    "null"  # Allow file:// protocol
 ], methods=["GET", "POST", "OPTIONS"])
 
 # Get API keys from environment variables (secure)
@@ -77,6 +80,71 @@ def track_request(occasion=None, style=None, success=True):
         stats['requests_by_style'][style] = stats['requests_by_style'].get(style, 0) + 1
     
     save_usage_stats(stats)
+
+def get_image_suggestion(occasion, style):
+    """Generate image suggestion based on occasion and style"""
+    image_map = {
+        'birthday': {
+            'friendly': '🎉',
+            'formal': '🎂',
+            'funny': '🎭',
+            'romantic': '💕'
+        },
+        'anniversary': {
+            'friendly': '🥂',
+            'formal': '💍',
+            'funny': '🎭',
+            'romantic': '💖'
+        },
+        'wedding': {
+            'friendly': '💒',
+            'formal': '👰',
+            'funny': '🎭',
+            'romantic': '💕'
+        },
+        'graduation': {
+            'friendly': '🎓',
+            'formal': '🎓',
+            'funny': '🎭',
+            'romantic': '🌟'
+        },
+        'thank_you': {
+            'friendly': '🙏',
+            'formal': '💐',
+            'funny': '🎭',
+            'romantic': '💝'
+        },
+        'congratulations': {
+            'friendly': '🎉',
+            'formal': '🏆',
+            'funny': '🎭',
+            'romantic': '💫'
+        },
+        'get_well': {
+            'friendly': '🤗',
+            'formal': '💊',
+            'funny': '🎭',
+            'romantic': '💝'
+        },
+        'sympathy': {
+            'friendly': '🤗',
+            'formal': '🕊️',
+            'funny': '🎭',
+            'romantic': '💝'
+        },
+        'holiday': {
+            'friendly': '🎄',
+            'formal': '🎁',
+            'funny': '🎭',
+            'romantic': '💝'
+        }
+    }
+    
+    # Get the appropriate image for the occasion and style
+    occasion_images = image_map.get(occasion, image_map['birthday'])
+    image = occasion_images.get(style, occasion_images['friendly'])
+    
+    return image
 
 @app.route('/api/test', methods=['GET'])
 def test_endpoint():
@@ -137,11 +205,15 @@ Keep the message concise but meaningful (2-3 sentences)."""
         
         generated_text = response.choices[0].message.content.strip()
         
+        # Generate image suggestion based on occasion and style
+        image_suggestion = get_image_suggestion(occasion, style)
+        
         track_request(occasion, style, True)
         
         return jsonify({
             'success': True,
-            'generated_text': generated_text
+            'generated_text': generated_text,
+            'image_suggestion': image_suggestion
         })
     
     except Exception as e:

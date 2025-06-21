@@ -204,6 +204,12 @@
     </div>
 
     <script>
+        // Development mode toggle - change this to true for local testing
+        const DEV_MODE = false;
+        const API_BASE = DEV_MODE 
+            ? 'http://localhost:5001' 
+            : 'https://greeting-card-generator-api.onrender.com';
+        
         const form = document.getElementById('cardForm');
         const generateBtn = document.getElementById('generateBtn');
         const result = document.getElementById('result');
@@ -229,7 +235,7 @@
 
             try {
                 // Call the deployed Flask backend API
-                const response = await fetch('https://greeting-card-generator-api.onrender.com/api/generate-text', {
+                const response = await fetch(`${API_BASE}/api/generate-text`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -255,7 +261,13 @@
                             <h4 style="color: #667eea; margin-bottom: 1rem;">Dear ${data.recipient},</h4>
                             <p style="line-height: 1.6; margin-bottom: 1rem;">${apiResult.generated_text}</p>
                             ${data.message ? `<p style="line-height: 1.6; margin-bottom: 1rem;"><em>${data.message}</em></p>` : ''}
-                            <p style="line-height: 1.6;">With warmest regards,<br>Good Boy AGI</p>
+                            <p style="line-height: 1.6; margin-bottom: 1rem;">With warmest regards,<br>Good Boy AGI</p>
+                            ${apiResult.image_suggestion ? `
+                                <div style="text-align: center; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #eee;">
+                                    <div style="font-size: 3rem;">${apiResult.image_suggestion}</div>
+                                    <div style="color: #666; font-size: 0.9rem; margin-top: 0.5rem;">Perfect for your card!</div>
+                                </div>
+                            ` : ''}
                         </div>
                     `;
                     
