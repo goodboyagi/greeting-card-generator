@@ -141,6 +141,36 @@
         .back-link:hover {
             text-decoration: underline;
         }
+
+        .generated-image {
+            text-align: center;
+            margin-top: 2rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 15px;
+            border: 2px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .generated-image img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .image-loading {
+            color: #666;
+            font-style: italic;
+            margin: 1rem 0;
+        }
+
+        .image-error {
+            color: #e74c3c;
+            background: rgba(231, 76, 60, 0.1);
+            padding: 1rem;
+            border-radius: 10px;
+            margin-top: 1rem;
+        }
     </style>
 </head>
 <body>
@@ -270,6 +300,17 @@
                             ` : ''}
                         </div>
                     `;
+                    
+                    // Add generated image if available
+                    if (apiResult.generated_image_url) {
+                        cardContent.innerHTML += `
+                            <div class="generated-image">
+                                <h4 style="color: #667eea; margin-bottom: 1rem;">🎨 Generated Image for Your Card</h4>
+                                <img src="${apiResult.generated_image_url}" alt="Generated greeting card image" onerror="this.parentElement.innerHTML='<div class=\'image-error\'>Failed to load generated image. The text generation was successful!</div>'">
+                                <p style="color: #666; font-size: 0.9rem; margin-top: 1rem;">AI-generated image that matches your greeting card theme and style.</p>
+                            </div>
+                        `;
+                    }
                     
                     // Show result
                     result.classList.add('show');

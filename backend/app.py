@@ -146,6 +146,97 @@ def get_image_suggestion(occasion, style):
     
     return image
 
+def generate_dalle_image(occasion, style, recipient, generated_text):
+    """Generate an image using DALL-E based on the greeting card content"""
+    try:
+        # Create a prompt for DALL-E based on the occasion, style, and content
+        image_prompts = {
+            'birthday': {
+                'friendly': f"Colorful birthday celebration with balloons, cake, and party decorations. Warm, cheerful atmosphere. Perfect for a greeting card for {recipient}.",
+                'formal': f"Elegant birthday cake with candles, sophisticated celebration setting. Professional greeting card style for {recipient}.",
+                'funny': f"Whimsical birthday scene with cartoon characters, confetti, and fun elements. Humorous greeting card for {recipient}.",
+                'romantic': f"Soft, romantic birthday scene with flowers, candles, and warm lighting. Loving greeting card for {recipient}."
+            },
+            'anniversary': {
+                'friendly': f"Celebration of love and partnership with champagne glasses, flowers, and romantic setting. Warm greeting card for {recipient}.",
+                'formal': f"Elegant anniversary celebration with roses, fine dining setting, and sophisticated atmosphere. Formal greeting card for {recipient}.",
+                'funny': f"Playful anniversary scene with cartoon hearts, funny elements, and celebration. Humorous greeting card for {recipient}.",
+                'romantic': f"Romantic anniversary scene with roses, candles, and intimate setting. Loving greeting card for {recipient}."
+            },
+            'wedding': {
+                'friendly': f"Beautiful wedding celebration with flowers, rings, and happy atmosphere. Warm greeting card for {recipient}.",
+                'formal': f"Elegant wedding scene with white flowers, rings, and sophisticated setting. Formal greeting card for {recipient}.",
+                'funny': f"Playful wedding scene with cartoon elements and celebration. Humorous greeting card for {recipient}.",
+                'romantic': f"Romantic wedding scene with roses, rings, and dreamy atmosphere. Loving greeting card for {recipient}."
+            },
+            'graduation': {
+                'friendly': f"Graduation celebration with cap, diploma, and achievement symbols. Warm greeting card for {recipient}.",
+                'formal': f"Elegant graduation scene with academic symbols and formal setting. Professional greeting card for {recipient}.",
+                'funny': f"Playful graduation scene with cartoon elements and celebration. Humorous greeting card for {recipient}.",
+                'romantic': f"Romantic graduation scene with flowers and achievement celebration. Loving greeting card for {recipient}."
+            },
+            'thank_you': {
+                'friendly': f"Gratitude scene with flowers, thank you symbols, and warm atmosphere. Friendly greeting card for {recipient}.",
+                'formal': f"Elegant thank you scene with formal flowers and sophisticated setting. Professional greeting card for {recipient}.",
+                'funny': f"Playful thank you scene with cartoon elements and fun symbols. Humorous greeting card for {recipient}.",
+                'romantic': f"Romantic thank you scene with roses and loving atmosphere. Sweet greeting card for {recipient}."
+            },
+            'congratulations': {
+                'friendly': f"Celebration scene with confetti, achievement symbols, and warm atmosphere. Friendly greeting card for {recipient}.",
+                'formal': f"Elegant congratulations scene with formal celebration elements. Professional greeting card for {recipient}.",
+                'funny': f"Playful congratulations scene with cartoon celebration elements. Humorous greeting card for {recipient}.",
+                'romantic': f"Romantic congratulations scene with flowers and loving celebration. Sweet greeting card for {recipient}."
+            },
+            'get_well': {
+                'friendly': f"Healing scene with flowers, get well symbols, and warm atmosphere. Caring greeting card for {recipient}.",
+                'formal': f"Elegant get well scene with formal flowers and healing symbols. Professional greeting card for {recipient}.",
+                'funny': f"Playful get well scene with cartoon healing elements. Humorous greeting card for {recipient}.",
+                'romantic': f"Romantic get well scene with roses and caring atmosphere. Loving greeting card for {recipient}."
+            },
+            'sympathy': {
+                'friendly': f"Peaceful sympathy scene with white flowers and calming atmosphere. Caring greeting card for {recipient}.",
+                'formal': f"Elegant sympathy scene with formal white flowers and respectful setting. Professional greeting card for {recipient}.",
+                'funny': f"Gentle sympathy scene with soft colors and caring elements. Thoughtful greeting card for {recipient}.",
+                'romantic': f"Romantic sympathy scene with white roses and loving atmosphere. Caring greeting card for {recipient}."
+            },
+            'holiday': {
+                'friendly': f"Holiday celebration scene with festive decorations and warm atmosphere. Friendly greeting card for {recipient}.",
+                'formal': f"Elegant holiday scene with formal decorations and sophisticated setting. Professional greeting card for {recipient}.",
+                'funny': f"Playful holiday scene with cartoon festive elements. Humorous greeting card for {recipient}.",
+                'romantic': f"Romantic holiday scene with festive flowers and loving atmosphere. Sweet greeting card for {recipient}."
+            }
+        }
+        
+        # Get the appropriate prompt for the occasion and style
+        occasion_prompts = image_prompts.get(occasion, image_prompts['birthday'])
+        prompt = occasion_prompts.get(style, occasion_prompts['friendly'])
+        
+        # Add style-specific instructions
+        style_instructions = {
+            'friendly': "Use warm, bright colors and friendly imagery.",
+            'formal': "Use elegant, sophisticated colors and formal imagery.",
+            'funny': "Use playful, cartoon-style imagery with bright colors.",
+            'romantic': "Use soft, romantic colors and loving imagery."
+        }
+        
+        full_prompt = f"{prompt} {style_instructions.get(style, '')} Create a beautiful greeting card image that matches the message: '{generated_text[:100]}...'"
+        
+        # Generate image using DALL-E
+        response = client.images.generate(
+            model="dall-e-3",
+            prompt=full_prompt,
+            size="1024x1024",
+            quality="standard",
+            n=1,
+        )
+        
+        # Return the image URL
+        return response.data[0].url
+        
+    except Exception as e:
+        print(f"Error generating DALL-E image: {str(e)}")
+        return None
+
 @app.route('/api/test', methods=['GET'])
 def test_endpoint():
     """Simple test endpoint for debugging"""
@@ -208,12 +299,16 @@ Keep the message concise but meaningful (2-3 sentences)."""
         # Generate image suggestion based on occasion and style
         image_suggestion = get_image_suggestion(occasion, style)
         
+        # Generate DALL-E image
+        generated_image_url = generate_dalle_image(occasion, style, recipient, generated_text)
+        
         track_request(occasion, style, True)
         
         return jsonify({
             'success': True,
             'generated_text': generated_text,
-            'image_suggestion': image_suggestion
+            'image_suggestion': image_suggestion,
+            'generated_image_url': generated_image_url
         })
     
     except Exception as e:
