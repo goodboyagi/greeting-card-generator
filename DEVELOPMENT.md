@@ -19,8 +19,21 @@ A full-stack AI application that generates personalized greeting cards using Ope
 
 ### Prerequisites
 - Python 3.9+
-- Virtual environment: `/Users/nitinsuresh/progs/my-venv/my-venv/`
+- Virtual environment: `$VENV` (set your virtual environment path)
 - OpenAI API key in `.env` file
+
+### Environment Setup
+```bash
+# Set your project directory
+export PROJECT_DIR="/path/to/your/greeting-card-generator"
+
+# Set your virtual environment path
+export VENV="/path/to/your/virtual/environment"
+
+# Example:
+# export PROJECT_DIR="$HOME/projects/greeting-card-generator"
+# export VENV="$HOME/venvs/my-venv"
+```
 
 ### Local Development Setup
 
@@ -32,15 +45,15 @@ const DEV_MODE = true;  // Change this for local testing
 
 #### 2. Start Backend Server
 ```bash
-cd backend
-source /Users/nitinsuresh/progs/my-venv/my-venv/bin/activate
+cd $PROJECT_DIR/backend
+source $VENV/bin/activate
 python app.py
 ```
 Backend runs on: `http://localhost:5001`
 
 #### 3. Start Frontend Server
 ```bash
-cd /Users/nitinsuresh/progs/experiments/2025/2025/2025_06/greeting-card-generator
+cd $PROJECT_DIR
 python serve_local.py
 ```
 Frontend runs on: `http://localhost:8000`
@@ -214,9 +227,13 @@ curl https://greeting-card-generator-api.onrender.com/api/stats
 
 ### Development Commands
 ```bash
+# Set environment variables first
+export PROJECT_DIR="/path/to/your/greeting-card-generator"
+export VENV="/path/to/your/virtual/environment"
+
 # Start local development
-cd backend && source /Users/nitinsuresh/progs/my-venv/my-venv/bin/activate && python app.py
-cd .. && python serve_local.py
+cd $PROJECT_DIR/backend && source $VENV/bin/activate && python app.py
+cd $PROJECT_DIR && python serve_local.py
 
 # Deploy to production
 git add . && git commit -m "Description" && git push origin main
