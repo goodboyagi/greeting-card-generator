@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usage Statistics - Greeting Card Generator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+        }
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        .chart-section {
+            margin-top: 2rem;
+        }
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .refresh-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 1rem;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Greeting Card Generator</a>
+        
+        <div class="header">
+            <h1>📊 Usage Statistics</h1>
+            <p>Real-time analytics for your Greeting Card Generator</p>
+        </div>
+
+        <button class="refresh-btn" onclick="loadStats()">🔄 Refresh Stats</button>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="total-requests">-</div>
+                <div class="stat-label">Total Requests</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="successful-requests">-</div>
+                <div class="stat-label">Successful Requests</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="failed-requests">-</div>
+                <div class="stat-label">Failed Requests</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="success-rate">-</div>
+                <div class="stat-label">Success Rate</div>
+            </div>
+        </div>
+
+        <div class="chart-section">
+            <div class="chart-container">
+                <h3>📈 Requests by Occasion</h3>
+                <div id="occasion-chart"></div>
+            </div>
+            
+            <div class="chart-container">
+                <h3>🎨 Requests by Style</h3>
+                <div id="style-chart"></div>
+            </div>
+            
+            <div class="chart-container">
+                <h3>🕒 Last Activity</h3>
+                <div id="last-activity"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://greeting-card-generator-api.onrender.com';
+        
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_BASE}/api/stats`);
+                const stats = await response.json();
+                
+                // Update main stats
+                document.getElementById('total-requests').textContent = stats.total_requests;
+                document.getElementById('successful-requests').textContent = stats.successful_requests;
+                document.getElementById('failed-requests').textContent = stats.failed_requests;
+                
+                const successRate = stats.total_requests > 0 
+                    ? Math.round((stats.successful_requests / stats.total_requests) * 100)
+                    : 0;
+                document.getElementById('success-rate').textContent = successRate + '%';
+                
+                // Update occasion chart
+                const occasionChart = document.getElementById('occasion-chart');
+                occasionChart.innerHTML = '';
+                Object.entries(stats.requests_by_occasion || {}).forEach(([occasion, count]) => {
+                    const bar = document.createElement('div');
+                    bar.style.cssText = `
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding: 0.5rem;
+                        margin: 0.25rem 0;
+                        background: rgba(102, 126, 234, 0.1);
+                        border-radius: 8px;
+                    `;
+                    bar.innerHTML = `
+                        <span style="text-transform: capitalize;">${occasion.replace('_', ' ')}</span>
+                        <span style="font-weight: bold; color: #667eea;">${count}</span>
+                    `;
+                    occasionChart.appendChild(bar);
+                });
+                
+                // Update style chart
+                const styleChart = document.getElementById('style-chart');
+                styleChart.innerHTML = '';
+                Object.entries(stats.requests_by_style || {}).forEach(([style, count]) => {
+                    const bar = document.createElement('div');
+                    bar.style.cssText = `
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding: 0.5rem;
+                        margin: 0.25rem 0;
+                        background: rgba(102, 126, 234, 0.1);
+                        border-radius: 8px;
+                    `;
+                    bar.innerHTML = `
+                        <span style="text-transform: capitalize;">${style}</span>
+                        <span style="font-weight: bold; color: #667eea;">${count}</span>
+                    `;
+                    styleChart.appendChild(bar);
+                });
+                
+                // Update last activity
+                const lastActivity = document.getElementById('last-activity');
+                if (stats.last_request) {
+                    const date = new Date(stats.last_request);
+                    lastActivity.innerHTML = `
+                        <div style="font-size: 1.1rem; color: #667eea;">
+                            ${date.toLocaleString()}
+                        </div>
+                        <div style="color: #666; font-size: 0.9rem;">
+                            ${Math.round((Date.now() - date.getTime()) / 1000 / 60)} minutes ago
+                        </div>
+                    `;
+                } else {
+                    lastActivity.innerHTML = '<div style="color: #666;">No activity yet</div>';
+                }
+                
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                document.getElementById('total-requests').textContent = 'Error';
+            }
+        }
+        
+        // Load stats on page load
+        loadStats();
+        
+        // Auto-refresh every 30 seconds
+        setInterval(loadStats, 30000);
+    </script>
+</body>
+</html> 

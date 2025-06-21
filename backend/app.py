@@ -3,6 +3,8 @@ from flask_cors import CORS
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
+from datetime import datetime
+import json
 
 # Load environment variables
 load_dotenv()
@@ -28,6 +30,53 @@ HUGGINGFACE_TOKEN = os.getenv('HUGGINGFACE_TOKEN')
 client = None
 if OPENAI_API_KEY:
     client = OpenAI(api_key=OPENAI_API_KEY)
+
+# Simple usage tracking
+USAGE_FILE = 'usage_stats.json'
+
+def load_usage_stats():
+    """Load usage statistics from file"""
+    try:
+        if os.path.exists(USAGE_FILE):
+            with open(USAGE_FILE, 'r') as f:
+                return json.load(f)
+    except:
+        pass
+    return {
+        'total_requests': 0,
+        'successful_requests': 0,
+        'failed_requests': 0,
+        'last_request': None,
+        'requests_by_occasion': {},
+        'requests_by_style': {}
+    }
+
+def save_usage_stats(stats):
+    """Save usage statistics to file"""
+    try:
+        with open(USAGE_FILE, 'w') as f:
+            json.dump(stats, f, indent=2)
+    except:
+        pass
+
+def track_request(occasion=None, style=None, success=True):
+    """Track API request"""
+    stats = load_usage_stats()
+    stats['total_requests'] += 1
+    stats['last_request'] = datetime.now().isoformat()
+    
+    if success:
+        stats['successful_requests'] += 1
+    else:
+        stats['failed_requests'] += 1
+    
+    if occasion:
+        stats['requests_by_occasion'][occasion] = stats['requests_by_occasion'].get(occasion, 0) + 1
+    
+    if style:
+        stats['requests_by_style'][style] = stats['requests_by_style'].get(style, 0) + 1
+    
+    save_usage_stats(stats)
 
 @app.route('/api/test', methods=['GET'])
 def test_endpoint():
@@ -88,6 +137,8 @@ Keep the message concise but meaningful (2-3 sentences)."""
         
         generated_text = response.choices[0].message.content.strip()
         
+        track_request(occasion, style, True)
+        
         return jsonify({
             'success': True,
             'generated_text': generated_text
@@ -95,6 +146,7 @@ Keep the message concise but meaningful (2-3 sentences)."""
     
     except Exception as e:
         print(f"Error generating text: {str(e)}")
+        track_request(occasion, style, False)
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/styles', methods=['GET'])
@@ -107,6 +159,12 @@ def get_styles():
         {'id': 'romantic', 'name': 'Romantic', 'description': 'Sweet and loving'}
     ]
     return jsonify(styles)
+
+@app.route('/api/stats', methods=['GET'])
+def get_stats():
+    """Get usage statistics"""
+    stats = load_usage_stats()
+    return jsonify(stats)
 
 if __name__ == '__main__':
     # Check if API keys are configured
