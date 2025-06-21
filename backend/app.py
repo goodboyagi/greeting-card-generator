@@ -96,4 +96,8 @@ if __name__ == '__main__':
         print("⚠️  Warning: OPENAI_API_KEY not found in environment variables")
         print("   Create a .env file with your API keys for full functionality")
     
-    app.run(debug=True, host='0.0.0.0', port=5001) 
+    # Get port from environment variable (for production) or use 5001 for local development
+    port = int(os.environ.get('PORT', 5001))
+    
+    # Use debug=False for production
+    app.run(debug=False, host='0.0.0.0', port=port) 
