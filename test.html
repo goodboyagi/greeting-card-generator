@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test - Greeting Card Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; }
+        .error { background-color: #f8d7da; }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>API Connection Test</h1>
+    
+    <div class="test-section">
+        <h3>Test 1: Health Check</h3>
+        <button onclick="testHealth()">Test Health Endpoint</button>
+        <div id="health-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 2: Simple Test</h3>
+        <button onclick="testSimple()">Test Simple Endpoint</button>
+        <div id="simple-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 3: Generate Text</h3>
+        <button onclick="testGenerate()">Test Generate Endpoint</button>
+        <div id="generate-result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://greeting-card-generator-api.onrender.com';
+        
+        async function testHealth() {
+            const resultDiv = document.getElementById('health-result');
+            try {
+                const response = await fetch(`${API_BASE}/api/health`);
+                const data = await response.json();
+                resultDiv.innerHTML = `<div class="success">✅ Success: ${JSON.stringify(data, null, 2)}</div>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function testSimple() {
+            const resultDiv = document.getElementById('simple-result');
+            try {
+                const response = await fetch(`${API_BASE}/api/test`);
+                const data = await response.json();
+                resultDiv.innerHTML = `<div class="success">✅ Success: ${JSON.stringify(data, null, 2)}</div>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function testGenerate() {
+            const resultDiv = document.getElementById('generate-result');
+            try {
+                const response = await fetch(`${API_BASE}/api/generate-text`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        recipient: 'Test User',
+                        occasion: 'birthday',
+                        style: 'friendly',
+                        message: 'Test message'
+                    })
+                });
+                const data = await response.json();
+                resultDiv.innerHTML = `<div class="success">✅ Success: ${JSON.stringify(data, null, 2)}</div>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html> 
