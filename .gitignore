@@ -2,3 +2,6 @@
 __pycache__/
 *.py[cod]
 .env
+
+# Usage statistics (should not be committed)
+usage_stats.json
