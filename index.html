@@ -201,7 +201,13 @@
                     <option value="get_well">Get Well Soon</option>
                     <option value="sympathy">Sympathy</option>
                     <option value="holiday">Holiday</option>
+                    <option value="custom">Custom Occasion</option>
                 </select>
+            </div>
+
+            <div class="form-group" id="customOccasionGroup" style="display: none;">
+                <label for="customOccasion">Custom Occasion:</label>
+                <input type="text" id="customOccasion" name="customOccasion" placeholder="Enter your custom occasion (e.g., Happy Upanayanam, Eid, Diwali, etc.)">
             </div>
 
             <div class="form-group">
@@ -245,6 +251,20 @@
         const result = document.getElementById('result');
         const cardContent = document.getElementById('cardContent');
         const error = document.getElementById('error');
+        const occasionSelect = document.getElementById('occasion');
+        const customOccasionGroup = document.getElementById('customOccasionGroup');
+        const customOccasionInput = document.getElementById('customOccasion');
+
+        // Show/hide custom occasion field based on selection
+        occasionSelect.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                customOccasionGroup.style.display = 'block';
+                customOccasionInput.required = true;
+            } else {
+                customOccasionGroup.style.display = 'none';
+                customOccasionInput.required = false;
+            }
+        });
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -256,9 +276,24 @@
             error.style.display = 'none';
 
             const formData = new FormData(form);
+            let occasion = formData.get('occasion');
+            
+            // Handle custom occasion
+            if (occasion === 'custom') {
+                const customOccasion = formData.get('customOccasion');
+                if (!customOccasion || customOccasion.trim() === '') {
+                    error.textContent = 'Please enter a custom occasion';
+                    error.style.display = 'block';
+                    generateBtn.disabled = false;
+                    generateBtn.textContent = 'Generate Greeting Card';
+                    return;
+                }
+                occasion = customOccasion.trim();
+            }
+            
             const data = {
                 recipient: formData.get('recipient'),
-                occasion: formData.get('occasion'),
+                occasion: occasion,
                 style: formData.get('style'),
                 message: formData.get('message')
             };
@@ -328,4 +363,4 @@
         });
     </script>
 </body>
-</html> 
+</html>

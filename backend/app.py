@@ -210,8 +210,20 @@ def generate_dalle_image(occasion, style, recipient, generated_text):
         }
         
         # Get the appropriate prompt for the occasion and style
-        occasion_prompts = image_prompts.get(occasion, image_prompts['birthday'])
-        prompt = occasion_prompts.get(style, occasion_prompts['friendly'])
+        occasion_prompts = image_prompts.get(occasion, None)
+        
+        if occasion_prompts:
+            # Use predefined prompt for known occasions
+            prompt = occasion_prompts.get(style, occasion_prompts['friendly'])
+        else:
+            # Create a generic celebration prompt for custom occasions
+            style_celebrations = {
+                'friendly': f"Warm celebration scene with flowers, decorations, and joyful atmosphere for {occasion}. Perfect for a greeting card for {recipient}.",
+                'formal': f"Elegant celebration scene with sophisticated decorations and formal atmosphere for {occasion}. Professional greeting card style for {recipient}.",
+                'funny': f"Playful celebration scene with cartoon elements and fun decorations for {occasion}. Humorous greeting card for {recipient}.",
+                'romantic': f"Romantic celebration scene with soft lighting and loving atmosphere for {occasion}. Sweet greeting card for {recipient}."
+            }
+            prompt = style_celebrations.get(style, style_celebrations['friendly'])
         
         # Add style-specific instructions
         style_instructions = {
