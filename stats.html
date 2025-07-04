@@ -129,7 +129,13 @@
     </div>
 
     <script>
-        const API_BASE = 'https://greeting-card-generator-api.onrender.com';
+        // Development mode - change this for local testing
+        const DEV_MODE = true;
+        
+        // API base URL - changes based on development mode
+        const API_BASE = DEV_MODE 
+            ? 'http://localhost:5001' 
+            : 'https://greeting-card-generator-api.onrender.com';
         
         async function loadStats() {
             try {
