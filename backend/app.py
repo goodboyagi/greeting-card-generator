@@ -39,40 +39,15 @@ BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 USAGE_FILE = os.path.join(BACKEND_DIR, 'usage_stats.json')
 print(f"[INFO] Usage stats file: {USAGE_FILE}")
 
-# In-memory stats cache for better persistence
-STATS_CACHE = None
-
 def load_usage_stats():
-    """Load usage statistics from file or environment variables"""
-    global STATS_CACHE
-    
-    # Return cached stats if available
-    if STATS_CACHE is not None:
-        return STATS_CACHE
-    
+    """Load usage statistics from file"""
     try:
         if os.path.exists(USAGE_FILE):
             with open(USAGE_FILE, 'r') as f:
-                stats = json.load(f)
-                STATS_CACHE = stats
-                print(f"[INFO] Loaded stats from file: {stats.get('total_requests', 0)} total requests")
-                return stats
+                return json.load(f)
     except Exception as e:
-        print(f"[ERROR] Failed to load usage stats from file: {e}")
-    
-    # Try to load from environment variables as backup
-    try:
-        env_stats = os.getenv('USAGE_STATS')
-        if env_stats:
-            stats = json.loads(env_stats)
-            STATS_CACHE = stats
-            print(f"[INFO] Loaded stats from environment: {stats.get('total_requests', 0)} total requests")
-            return stats
-    except Exception as e:
-        print(f"[ERROR] Failed to load stats from environment: {e}")
-    
-    # Return default stats
-    default_stats = {
+        print(f"[ERROR] Failed to load usage stats: {e}")
+    return {
         'total_requests': 0,
         'successful_requests': 0,
         'failed_requests': 0,
@@ -80,53 +55,33 @@ def load_usage_stats():
         'requests_by_occasion': {},
         'requests_by_style': {}
     }
-    STATS_CACHE = default_stats
-    return default_stats
 
 def save_usage_stats(stats):
-    """Save usage statistics to file and environment"""
-    global STATS_CACHE
-    STATS_CACHE = stats
-    
-    # Save to file
+    """Save usage statistics to file"""
     try:
         with open(USAGE_FILE, 'w') as f:
             json.dump(stats, f, indent=2)
-        print(f"[INFO] Saved stats to file: {stats.get('total_requests', 0)} total requests")
     except Exception as e:
-        print(f"[ERROR] Failed to save usage stats to file: {e}")
-    
-    # Save to environment variable (for Render persistence)
-    try:
-        stats_json = json.dumps(stats)
-        # Note: This won't persist across Render restarts, but helps with immediate persistence
-        os.environ['USAGE_STATS'] = stats_json
-    except Exception as e:
-        print(f"[ERROR] Failed to save stats to environment: {e}")
+        print(f"[ERROR] Failed to save usage stats: {e}")
 
 def track_request(occasion=None, style=None, success=True):
-    """Track API request with improved persistence"""
-    try:
-        stats = load_usage_stats()
-        stats['total_requests'] += 1
-        stats['last_request'] = datetime.now().isoformat()
-        
-        if success:
-            stats['successful_requests'] += 1
-        else:
-            stats['failed_requests'] += 1
-        
-        if occasion:
-            stats['requests_by_occasion'][occasion] = stats['requests_by_occasion'].get(occasion, 0) + 1
-        
-        if style:
-            stats['requests_by_style'][style] = stats['requests_by_style'].get(style, 0) + 1
-        
-        save_usage_stats(stats)
-        print(f"[INFO] Tracked request: {occasion} ({style}) - {'success' if success else 'failed'}")
-        
-    except Exception as e:
-        print(f"[ERROR] Failed to track request: {e}")
+    """Track API request"""
+    stats = load_usage_stats()
+    stats['total_requests'] += 1
+    stats['last_request'] = datetime.now().isoformat()
+    
+    if success:
+        stats['successful_requests'] += 1
+    else:
+        stats['failed_requests'] += 1
+    
+    if occasion:
+        stats['requests_by_occasion'][occasion] = stats['requests_by_occasion'].get(occasion, 0) + 1
+    
+    if style:
+        stats['requests_by_style'][style] = stats['requests_by_style'].get(style, 0) + 1
+    
+    save_usage_stats(stats)
 
 def get_image_suggestion(occasion, style):
     """Generate image suggestion based on occasion and style"""
