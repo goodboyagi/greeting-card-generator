@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from datetime import datetime
 import json
+import requests
+import base64
 
 # Load environment variables
 load_dotenv()
@@ -42,6 +44,11 @@ print(f"[INFO] Usage stats file: {USAGE_FILE}")
 # In-memory stats cache for better persistence
 STATS_CACHE = None
 
+# GitHub storage configuration
+GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
+GITHUB_REPO = 'goodboyagi/greeting-card-generator'
+GITHUB_STATS_FILE = 'production_stats.json'
+
 def load_usage_stats():
     """Load usage statistics from file or environment variables"""
     global STATS_CACHE
@@ -70,6 +77,17 @@ def load_usage_stats():
             return stats
     except Exception as e:
         print(f"[ERROR] Failed to load stats from environment: {e}")
+    
+    # Try to load from GitHub as persistent storage
+    try:
+        if GITHUB_TOKEN:
+            stats = load_stats_from_github()
+            if stats:
+                STATS_CACHE = stats
+                print(f"[INFO] Loaded stats from GitHub: {stats.get('total_requests', 0)} total requests")
+                return stats
+    except Exception as e:
+        print(f"[ERROR] Failed to load stats from GitHub: {e}")
     
     # Return default stats
     default_stats = {
@@ -103,6 +121,13 @@ def save_usage_stats(stats):
         os.environ['USAGE_STATS'] = stats_json
     except Exception as e:
         print(f"[ERROR] Failed to save stats to environment: {e}")
+    
+    # Save to GitHub as persistent storage
+    try:
+        if GITHUB_TOKEN:
+            save_stats_to_github(stats)
+    except Exception as e:
+        print(f"[ERROR] Failed to save stats to GitHub: {e}")
 
 def track_request(occasion=None, style=None, success=True):
     """Track API request with improved persistence"""
@@ -391,6 +416,78 @@ def get_stats():
     """Get usage statistics"""
     stats = load_usage_stats()
     return jsonify(stats)
+
+def load_stats_from_github():
+    """Load stats from GitHub file"""
+    if not GITHUB_TOKEN:
+        return None
+    
+    try:
+        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_STATS_FILE}"
+        headers = {
+            'Authorization': f'token {GITHUB_TOKEN}',
+            'Accept': 'application/vnd.github.v3+json'
+        }
+        
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            content = response.json()
+            stats_data = base64.b64decode(content['content']).decode('utf-8')
+            return json.loads(stats_data)
+        elif response.status_code == 404:
+            # File doesn't exist, return None to create default stats
+            return None
+        else:
+            print(f"[ERROR] GitHub API error: {response.status_code}")
+            return None
+    except Exception as e:
+        print(f"[ERROR] Failed to load from GitHub: {e}")
+        return None
+
+def save_stats_to_github(stats):
+    """Save stats to GitHub file"""
+    if not GITHUB_TOKEN:
+        return False
+    
+    try:
+        # First, get the current file to get the SHA
+        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_STATS_FILE}"
+        headers = {
+            'Authorization': f'token {GITHUB_TOKEN}',
+            'Accept': 'application/vnd.github.v3+json'
+        }
+        
+        # Get current file SHA
+        response = requests.get(url, headers=headers)
+        sha = None
+        if response.status_code == 200:
+            sha = response.json()['sha']
+        
+        # Prepare the update
+        stats_json = json.dumps(stats, indent=2)
+        content = base64.b64encode(stats_json.encode('utf-8')).decode('utf-8')
+        
+        data = {
+            'message': f'Update usage stats - {stats.get("total_requests", 0)} total requests',
+            'content': content
+        }
+        
+        if sha:
+            data['sha'] = sha
+        
+        # Update the file
+        response = requests.put(url, headers=headers, json=data)
+        
+        if response.status_code in [200, 201]:
+            print(f"[INFO] Saved stats to GitHub: {stats.get('total_requests', 0)} total requests")
+            return True
+        else:
+            print(f"[ERROR] Failed to save to GitHub: {response.status_code}")
+            return False
+            
+    except Exception as e:
+        print(f"[ERROR] Failed to save to GitHub: {e}")
+        return False
 
 if __name__ == '__main__':
     # Check if API keys are configured
