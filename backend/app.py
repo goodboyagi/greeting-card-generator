@@ -7,6 +7,7 @@ from datetime import datetime
 import json
 import requests
 import base64
+import re
 
 # Load environment variables
 load_dotenv()
@@ -48,6 +49,36 @@ STATS_CACHE = None
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
 GITHUB_REPO = 'goodboyagi/greeting-card-generator'
 GITHUB_STATS_FILE = 'production_stats.json'
+
+def extract_scene_keywords(recipient, occasion, message, generated_text):
+    """
+    Extracts key entities and themes from recipient, occasion, message, and especially generated_text.
+    Returns a scene description string for DALL-E.
+    """
+    keywords = set()
+    # Add recipient and occasion as possible themes
+    if recipient:
+        keywords.add(recipient)
+    if occasion:
+        keywords.add(occasion)
+    # Add words from message and generated text
+    text = f"{message} {generated_text}".replace("!", ".").replace("?", ".")
+    # Simple noun extraction: capitalized words and known magical/fantasy terms
+    capitalized = re.findall(r'\b([A-Z][a-zA-Z0-9]+)\b', generated_text)
+    for word in capitalized:
+        if word.lower() not in ["dear", "congratulations", "congratulation", "congrats", "happy", "best", "wishes", "regards", "sender", "name"]:
+            keywords.add(word)
+    # Add magical/fantasy keywords if present
+    fantasy_terms = ["wizard", "magic", "magical", "spell", "wand", "hogwarts", "fantasy", "dragon", "lumos", "accio", "tournament", "victory", "niffler", "vault", "egg", "champion", "triwizard", "golden", "snitch"]
+    for term in fantasy_terms:
+        if term in text.lower():
+            keywords.add(term)
+    # Remove generic words
+    generic_words = set(["dear", "congratulations", "congratulation", "congrats", "happy", "best", "wishes", "regards", "on", "the", "a", "an", "and", "to", "for", "with", "of", "in", "is", "are", "you", "your", "from", "sender", "name", "won", "keep", "bright", "like", "just", "truly", "now", "have", "has", "this", "that", "it", "as", "be", "by", "at", "or", "but", "not", "so", "if", "out", "all", "we", "us", "they", "them", "he", "she", "his", "her", "their", "our", "ours", "mine", "yours", "theirs", "ourselves", "myself", "yourself", "himself", "herself", "itself", "themselves"])
+    keywords = {k for k in keywords if k.lower() not in generic_words}
+    # Build scene description
+    scene = ", ".join(sorted(keywords))
+    return scene
 
 def load_usage_stats():
     """Load usage statistics from file or environment variables"""
@@ -218,64 +249,64 @@ def get_image_suggestion(occasion, style):
     
     return image
 
-def generate_dalle_image(occasion, style, recipient, generated_text):
+def generate_dalle_image(occasion, style, recipient, generated_text, message):
     """Generate an image using DALL-E based on the greeting card content"""
     try:
         # Create a prompt for DALL-E based on the occasion, style, and content
         image_prompts = {
             'birthday': {
-                'friendly': f"Colorful birthday celebration with balloons, cake, and party decorations. Warm, cheerful atmosphere. Perfect for a greeting card for {recipient}.",
-                'formal': f"Elegant birthday cake with candles, sophisticated celebration setting. Professional greeting card style for {recipient}.",
-                'funny': f"Whimsical birthday scene with cartoon characters, confetti, and fun elements. Humorous greeting card for {recipient}.",
-                'romantic': f"Soft, romantic birthday scene with flowers, candles, and warm lighting. Loving greeting card for {recipient}."
+                'friendly': f"Colorful birthday celebration with balloons, cake, and party decorations. Warm, cheerful atmosphere. NO TEXT, NO WORDS, NO LETTERS. Clean greeting card design.",
+                'formal': f"Elegant birthday cake with candles, sophisticated celebration setting. Professional greeting card design. NO TEXT, NO WORDS, NO LETTERS.",
+                'funny': f"Whimsical birthday scene with cartoon characters, confetti, and fun elements. Humorous greeting card design. NO TEXT, NO WORDS, NO LETTERS.",
+                'romantic': f"Soft, romantic birthday scene with flowers, candles, and warm lighting. Loving greeting card design. NO TEXT, NO WORDS, NO LETTERS."
             },
             'anniversary': {
-                'friendly': f"Celebration of love and partnership with champagne glasses, flowers, and romantic setting. Warm greeting card for {recipient}.",
-                'formal': f"Elegant anniversary celebration with roses, fine dining setting, and sophisticated atmosphere. Formal greeting card for {recipient}.",
-                'funny': f"Playful anniversary scene with cartoon hearts, funny elements, and celebration. Humorous greeting card for {recipient}.",
-                'romantic': f"Romantic anniversary scene with roses, candles, and intimate setting. Loving greeting card for {recipient}."
+                'friendly': f"Celebration of love and partnership with champagne glasses, flowers, and romantic setting. Warm greeting card design. NO TEXT, NO WORDS, NO LETTERS.",
+                'formal': f"Elegant anniversary celebration with roses, fine dining setting, and sophisticated atmosphere. Formal greeting card design. NO TEXT, NO WORDS, NO LETTERS.",
+                'funny': f"Playful anniversary scene with cartoon hearts, funny elements, and celebration. Humorous greeting card design. NO TEXT, NO WORDS, NO LETTERS.",
+                'romantic': f"Romantic anniversary scene with roses, candles, and intimate setting. Loving greeting card design. NO TEXT, NO WORDS, NO LETTERS."
             },
             'wedding': {
-                'friendly': f"Beautiful wedding celebration with flowers, rings, and happy atmosphere. Warm greeting card for {recipient}.",
-                'formal': f"Elegant wedding scene with white flowers, rings, and sophisticated setting. Formal greeting card for {recipient}.",
-                'funny': f"Playful wedding scene with cartoon elements and celebration. Humorous greeting card for {recipient}.",
-                'romantic': f"Romantic wedding scene with roses, rings, and dreamy atmosphere. Loving greeting card for {recipient}."
+                'friendly': f"Beautiful wedding celebration with flowers, rings, and happy atmosphere. Warm greeting card design. NO TEXT, NO WORDS, NO LETTERS.",
+                'formal': f"Elegant wedding scene with white flowers, rings, and sophisticated setting. Formal greeting card design. NO TEXT, NO WORDS, NO LETTERS.",
+                'funny': f"Playful wedding scene with cartoon elements and celebration. Humorous greeting card design. NO TEXT, NO WORDS, NO LETTERS.",
+                'romantic': f"Romantic wedding scene with roses, rings, and dreamy atmosphere. Loving greeting card design. NO TEXT, NO WORDS, NO LETTERS."
             },
             'graduation': {
-                'friendly': f"Graduation celebration with cap, diploma, and achievement symbols. Warm greeting card for {recipient}.",
-                'formal': f"Elegant graduation scene with academic symbols and formal setting. Professional greeting card for {recipient}.",
-                'funny': f"Playful graduation scene with cartoon elements and celebration. Humorous greeting card for {recipient}.",
-                'romantic': f"Romantic graduation scene with flowers and achievement celebration. Loving greeting card for {recipient}."
+                'friendly': f"Graduation celebration with cap, diploma, and achievement symbols. Warm greeting card design. NO TEXT, NO WORDS, NO LETTERS.",
+                'formal': f"Elegant graduation scene with academic symbols and formal setting. Professional greeting card design. NO TEXT, NO WORDS, NO LETTERS.",
+                'funny': f"Playful graduation scene with cartoon elements and celebration. Humorous greeting card design. NO TEXT, NO WORDS, NO LETTERS.",
+                'romantic': f"Romantic graduation scene with flowers and achievement celebration. Loving greeting card design. NO TEXT, NO WORDS, NO LETTERS."
             },
             'thank_you': {
-                'friendly': f"Gratitude scene with flowers, thank you symbols, and warm atmosphere. Friendly greeting card for {recipient}.",
-                'formal': f"Elegant thank you scene with formal flowers and sophisticated setting. Professional greeting card for {recipient}.",
-                'funny': f"Playful thank you scene with cartoon elements and fun symbols. Humorous greeting card for {recipient}.",
-                'romantic': f"Romantic thank you scene with roses and loving atmosphere. Sweet greeting card for {recipient}."
+                'friendly': f"Gratitude scene with flowers, thank you symbols, and warm atmosphere. Friendly greeting card design. NO TEXT, NO WORDS, NO LETTERS.",
+                'formal': f"Elegant thank you scene with formal flowers and sophisticated setting. Professional greeting card design. NO TEXT, NO WORDS, NO LETTERS.",
+                'funny': f"Playful thank you scene with cartoon elements and fun symbols. Humorous greeting card design. NO TEXT, NO WORDS, NO LETTERS.",
+                'romantic': f"Romantic thank you scene with roses and loving atmosphere. Sweet greeting card design. NO TEXT, NO WORDS, NO LETTERS."
             },
             'congratulations': {
-                'friendly': f"Celebration scene with confetti, achievement symbols, and warm atmosphere. Friendly greeting card for {recipient}.",
-                'formal': f"Elegant congratulations scene with formal celebration elements. Professional greeting card for {recipient}.",
-                'funny': f"Playful congratulations scene with cartoon celebration elements. Humorous greeting card for {recipient}.",
-                'romantic': f"Romantic congratulations scene with flowers and loving celebration. Sweet greeting card for {recipient}."
+                'friendly': f"Victory celebration scene with confetti, trophies, achievement symbols, and warm atmosphere. NOT a birthday party. Friendly greeting card design. NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO WRITING, NO BIRTHDAY CAKES, NO BALLOONS.",
+                'formal': f"Elegant congratulations scene with formal celebration elements, awards, and sophisticated atmosphere. NOT a birthday party. Professional greeting card design. NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO WRITING, NO BIRTHDAY CAKES, NO BALLOONS.",
+                'funny': f"Playful congratulations scene with cartoon celebration elements, fun symbols, and humorous atmosphere. NOT a birthday party. Humorous greeting card design. NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO WRITING, NO BIRTHDAY CAKES, NO BALLOONS.",
+                'romantic': f"Romantic congratulations scene with flowers and loving celebration atmosphere. NOT a birthday party. Sweet greeting card design. NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO WRITING, NO BIRTHDAY CAKES, NO BALLOONS."
             },
             'get_well': {
-                'friendly': f"Healing scene with flowers, get well symbols, and warm atmosphere. Caring greeting card for {recipient}.",
-                'formal': f"Elegant get well scene with formal flowers and healing symbols. Professional greeting card for {recipient}.",
-                'funny': f"Playful get well scene with cartoon healing elements. Humorous greeting card for {recipient}.",
-                'romantic': f"Romantic get well scene with roses and caring atmosphere. Loving greeting card for {recipient}."
+                'friendly': f"Healing scene with flowers, get well symbols, and warm atmosphere. Caring greeting card design. NO TEXT, NO WORDS, NO LETTERS.",
+                'formal': f"Elegant get well scene with formal flowers and healing symbols. Professional greeting card design. NO TEXT, NO WORDS, NO LETTERS.",
+                'funny': f"Playful get well scene with cartoon healing elements. Humorous greeting card design. NO TEXT, NO WORDS, NO LETTERS.",
+                'romantic': f"Romantic get well scene with roses and caring atmosphere. Loving greeting card design. NO TEXT, NO WORDS, NO LETTERS."
             },
             'sympathy': {
-                'friendly': f"Peaceful sympathy scene with white flowers and calming atmosphere. Caring greeting card for {recipient}.",
-                'formal': f"Elegant sympathy scene with formal white flowers and respectful setting. Professional greeting card for {recipient}.",
-                'funny': f"Gentle sympathy scene with soft colors and caring elements. Thoughtful greeting card for {recipient}.",
-                'romantic': f"Romantic sympathy scene with white roses and loving atmosphere. Caring greeting card for {recipient}."
+                'friendly': f"Peaceful sympathy scene with white flowers and calming atmosphere. Caring greeting card design. NO TEXT, NO WORDS, NO LETTERS.",
+                'formal': f"Elegant sympathy scene with formal white flowers and respectful setting. Professional greeting card design. NO TEXT, NO WORDS, NO LETTERS.",
+                'funny': f"Gentle sympathy scene with soft colors and caring elements. Thoughtful greeting card design. NO TEXT, NO WORDS, NO LETTERS.",
+                'romantic': f"Romantic sympathy scene with white roses and loving atmosphere. Caring greeting card design. NO TEXT, NO WORDS, NO LETTERS."
             },
             'holiday': {
-                'friendly': f"Holiday celebration scene with festive decorations and warm atmosphere. Friendly greeting card for {recipient}.",
-                'formal': f"Elegant holiday scene with formal decorations and sophisticated setting. Professional greeting card for {recipient}.",
-                'funny': f"Playful holiday scene with cartoon festive elements. Humorous greeting card for {recipient}.",
-                'romantic': f"Romantic holiday scene with festive flowers and loving atmosphere. Sweet greeting card for {recipient}."
+                'friendly': f"Holiday celebration scene with festive decorations and warm atmosphere. Friendly greeting card design. NO TEXT, NO WORDS, NO LETTERS.",
+                'formal': f"Elegant holiday scene with formal decorations and sophisticated setting. Professional greeting card design. NO TEXT, NO WORDS, NO LETTERS.",
+                'funny': f"Playful holiday scene with cartoon festive elements. Humorous greeting card design. NO TEXT, NO WORDS, NO LETTERS.",
+                'romantic': f"Romantic holiday scene with festive flowers and loving atmosphere. Sweet greeting card design. NO TEXT, NO WORDS, NO LETTERS."
             }
         }
         
@@ -288,27 +319,78 @@ def generate_dalle_image(occasion, style, recipient, generated_text):
         else:
             # Create a generic celebration prompt for custom occasions
             style_celebrations = {
-                'friendly': f"Warm celebration scene with flowers, decorations, and joyful atmosphere for {occasion}. Perfect for a greeting card for {recipient}.",
-                'formal': f"Elegant celebration scene with sophisticated decorations and formal atmosphere for {occasion}. Professional greeting card style for {recipient}.",
-                'funny': f"Playful celebration scene with cartoon elements and fun decorations for {occasion}. Humorous greeting card for {recipient}.",
-                'romantic': f"Romantic celebration scene with soft lighting and loving atmosphere for {occasion}. Sweet greeting card for {recipient}."
+                'friendly': f"Warm celebration scene with flowers, decorations, and joyful atmosphere for {occasion}. Perfect greeting card design. NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO WRITING.",
+                'formal': f"Elegant celebration scene with sophisticated decorations and formal atmosphere for {occasion}. Professional greeting card design. NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO WRITING.",
+                'funny': f"Playful celebration scene with cartoon elements and fun decorations for {occasion}. Humorous greeting card design. NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO WRITING.",
+                'romantic': f"Romantic celebration scene with soft lighting and loving atmosphere for {occasion}. Sweet greeting card design. NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO WRITING."
             }
             prompt = style_celebrations.get(style, style_celebrations['friendly'])
         
         # Add style-specific instructions
         style_instructions = {
-            'friendly': "Use warm, bright colors and friendly imagery.",
-            'formal': "Use elegant, sophisticated colors and formal imagery.",
-            'funny': "Use playful, cartoon-style imagery with bright colors.",
-            'romantic': "Use soft, romantic colors and loving imagery."
+            'friendly': "Use warm, bright colors and friendly imagery. Clean, minimalist design suitable for printing.",
+            'formal': "Use elegant, sophisticated colors and formal imagery. Clean, professional design suitable for printing.",
+            'funny': "Use playful, cartoon-style imagery with bright colors. Clean, fun design suitable for printing.",
+            'romantic': "Use soft, romantic colors and loving imagery. Clean, elegant design suitable for printing."
         }
         
-        full_prompt = f"{prompt} {style_instructions.get(style, '')} Create a beautiful greeting card image that matches the message: '{generated_text[:100]}...'"
+        # Extract context from generated text to improve image relevance
+        context_keywords = []
+        
+        # General theme detection based on keywords
+        text_lower = generated_text.lower()
+        
+        # Achievement/Victory themes
+        if any(word in text_lower for word in ["win", "won", "victory", "champion", "tournament", "competition", "achievement", "success"]):
+            context_keywords.append("victory celebration theme")
+        
+        # Magical/Fantasy themes
+        if any(word in text_lower for word in ["magical", "wizard", "spell", "magic", "fantasy", "enchanted", "mystical", "lumos", "accio", "wizarding", "harry"]):
+            context_keywords.append("magical fantasy theme")
+        
+        # Academic themes
+        if any(word in text_lower for word in ["graduation", "degree", "study", "academic", "university", "college", "school"]):
+            context_keywords.append("academic achievement theme")
+        
+        # Love/Romance themes
+        if any(word in text_lower for word in ["love", "romantic", "heart", "sweetheart", "darling", "beloved"]):
+            context_keywords.append("romantic love theme")
+        
+        # Health/Recovery themes
+        if any(word in text_lower for word in ["heal", "recovery", "well", "health", "strength", "courage"]):
+            context_keywords.append("healing wellness theme")
+        
+        # Celebration themes
+        if any(word in text_lower for word in ["party", "celebrate", "celebration", "festive", "joy", "happy"]):
+            context_keywords.append("celebration festive theme")
+        
+        # Professional themes
+        if any(word in text_lower for word in ["career", "job", "promotion", "business", "professional", "work"]):
+            context_keywords.append("professional career theme")
+        
+        context_prompt = " " + " ".join(context_keywords) if context_keywords else ""
+        
+        # Create a clean, professional prompt that focuses on the visual design
+        full_prompt = f"{prompt}{context_prompt} {style_instructions.get(style, '')} Create a clean, professional greeting card background image with ABSOLUTELY NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO WRITING, NO SPEECH BUBBLES, NO SIGNS, NO BIRTHDAY CAKES, NO BALLOONS, NO PARTY DECORATIONS. The image should be suitable for printing and email sharing. Focus on beautiful visual elements only. IMPORTANT: This is a background image for a greeting card, not a greeting card with text on it. DO NOT include any birthday elements or party decorations."
         
         # Generate image using DALL-E
+        '''
+        print(f"[DALL-E PROMPT] {full_prompt}")
         response = client.images.generate(
             model="dall-e-3",
             prompt=full_prompt,
+            size="1024x1024",
+            quality="standard",
+            n=1,
+        )
+        '''
+        
+        scene_description = extract_scene_keywords(recipient, occasion, message or "", generated_text)
+        prompt = f"{scene_description}. NO TEXT, NO WORDS, NO LETTERS, NO BANNERS, NO SIGNS, NO CAKES, NO BALLOONS, NO PARTY DECORATIONS, NO WRITING, NO TYPOGRAPHY. Focus on beautiful, magical fantasy visual elements only."
+        print(f"[DALL-E PROMPT] {prompt}")
+        response = client.images.generate(
+            model="dall-e-3",
+            prompt=prompt,
             size="1024x1024",
             quality="standard",
             n=1,
@@ -384,7 +466,7 @@ Keep the message concise but meaningful (2-3 sentences)."""
         image_suggestion = get_image_suggestion(occasion, style)
         
         # Generate DALL-E image
-        generated_image_url = generate_dalle_image(occasion, style, recipient, generated_text)
+        generated_image_url = generate_dalle_image(occasion, style, recipient, generated_text, message)
         
         track_request(occasion, style, True)
         
