@@ -68,17 +68,55 @@ def extract_scene_keywords(recipient, occasion, message, generated_text):
     for word in capitalized:
         if word.lower() not in ["dear", "congratulations", "congratulation", "congrats", "happy", "best", "wishes", "regards", "sender", "name"]:
             keywords.add(word)
-    # Add magical/fantasy keywords if present
-    fantasy_terms = ["wizard", "magic", "magical", "spell", "wand", "hogwarts", "fantasy", "dragon", "lumos", "accio", "tournament", "victory", "niffler", "vault", "egg", "champion", "triwizard", "golden", "snitch"]
-    for term in fantasy_terms:
-        if term in text.lower():
-            keywords.add(term)
     # Remove generic words
     generic_words = set(["dear", "congratulations", "congratulation", "congrats", "happy", "best", "wishes", "regards", "on", "the", "a", "an", "and", "to", "for", "with", "of", "in", "is", "are", "you", "your", "from", "sender", "name", "won", "keep", "bright", "like", "just", "truly", "now", "have", "has", "this", "that", "it", "as", "be", "by", "at", "or", "but", "not", "so", "if", "out", "all", "we", "us", "they", "them", "he", "she", "his", "her", "their", "our", "ours", "mine", "yours", "theirs", "ourselves", "myself", "yourself", "himself", "herself", "itself", "themselves"])
     keywords = {k for k in keywords if k.lower() not in generic_words}
     # Build scene description
     scene = ", ".join(sorted(keywords))
     return scene
+
+def extract_important_objects(generated_text, occasion, style):
+    """
+    Uses OpenAI to extract important objects and visual elements from the generated text.
+    Returns a list of objects that should be included in the DALL-E image.
+    """
+    if not client:
+        return []
+    
+    try:
+        prompt = f"""Analyze this greeting card message and list the most important visual objects, elements, or themes that should be represented in a greeting card image.
+
+Message: "{generated_text}"
+Occasion: {occasion}
+Style: {style}
+
+Please list 3-5 specific visual objects or elements that would make sense for a greeting card image. Focus on:
+- Objects mentioned in the message
+- Symbols appropriate for the occasion
+- Elements that match the style (friendly, formal, funny, romantic)
+- Visual elements that would enhance the message
+
+Return only a comma-separated list of objects, no explanations. Example: "flowers, candles, warm lighting" """
+
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are an expert at identifying visual elements for greeting card designs."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=100,
+            temperature=0.3
+        )
+        
+        objects_text = response.choices[0].message.content.strip()
+        # Clean up the response and split into list
+        objects = [obj.strip() for obj in objects_text.split(',') if obj.strip()]
+        print(f"[OBJECTS EXTRACTED] {objects}")
+        return objects
+        
+    except Exception as e:
+        print(f"Error extracting objects: {str(e)}")
+        return []
 
 def load_usage_stats():
     """Load usage statistics from file or environment variables"""
@@ -385,12 +423,34 @@ def generate_dalle_image(occasion, style, recipient, generated_text, message):
         )
         '''
         
-        scene_description = extract_scene_keywords(recipient, occasion, message or "", generated_text)
-        prompt = f"{scene_description}. NO TEXT, NO WORDS, NO LETTERS, NO BANNERS, NO SIGNS, NO CAKES, NO BALLOONS, NO PARTY DECORATIONS, NO WRITING, NO TYPOGRAPHY. Focus on beautiful, magical fantasy visual elements only."
-        print(f"[DALL-E PROMPT] {prompt}")
+        # Extract important objects from the generated text using OpenAI
+        important_objects = extract_important_objects(generated_text, occasion, style)
+        
+        # Build enhanced prompt with extracted objects
+        base_prompt = f"Beautiful greeting card design for {occasion} in {style} style"
+        
+        if important_objects:
+            objects_text = ", ".join(important_objects)
+            enhanced_prompt = f"{base_prompt} featuring {objects_text}. Clean, elegant design suitable for printing."
+        else:
+            # Fallback to scene keywords if object extraction fails
+            scene_description = extract_scene_keywords(recipient, occasion, message or "", generated_text)
+            enhanced_prompt = f"{base_prompt} with {scene_description}. Clean, elegant design suitable for printing."
+        
+        # Add style-specific instructions
+        style_instructions = {
+            'friendly': "Use warm, bright colors and friendly imagery.",
+            'formal': "Use elegant, sophisticated colors and formal imagery.",
+            'funny': "Use playful, cartoon-style imagery with bright colors.",
+            'romantic': "Use soft, romantic colors and loving imagery."
+        }
+        
+        final_prompt = f"{enhanced_prompt} {style_instructions.get(style, '')} NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO WRITING, NO BANNERS, NO SIGNS. Focus on beautiful visual elements only."
+        
+        print(f"[DALL-E PROMPT] {final_prompt}")
         response = client.images.generate(
             model="dall-e-3",
-            prompt=prompt,
+            prompt=final_prompt,
             size="1024x1024",
             quality="standard",
             n=1,
