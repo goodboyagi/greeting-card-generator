@@ -264,6 +264,14 @@
             border-radius: 10px;
             margin-top: 1rem;
         }
+        
+        /* Card content styling - moved from inline styles */
+        .card-content-inner {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
@@ -429,7 +437,7 @@
                 if (apiResult.success) {
                     // Display the generated text
                     cardContent.innerHTML = `
-                        <div class="card-content-inner" style="background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                        <div class="card-content-inner">
                             <div style="line-height: 1.6; margin-bottom: 1rem; white-space: pre-line;">${apiResult.generated_text}</div>
                             <p style="line-height: 1.6; margin-bottom: 1rem;">With warmest regards,<br>${data.sender}</p>
                             ${apiResult.image_suggestion ? `
