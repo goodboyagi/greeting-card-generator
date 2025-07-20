@@ -373,6 +373,30 @@
         const recipientInput = document.getElementById('recipient');
         const recipientPlaceholder = document.getElementById('recipientPlaceholder');
 
+        // Function to get contextually appropriate signature based on occasion and style
+        function getSignature(occasion, style) {
+            const romanticOccasions = ['anniversary', 'wedding', 'valentine'];
+            const formalOccasions = ['graduation', 'thank_you', 'sympathy'];
+            const friendlyOccasions = ['birthday', 'congratulations', 'get_well', 'holiday'];
+            
+            // Romantic occasions or romantic style
+            if (romanticOccasions.includes(occasion) || style === 'romantic') {
+                return 'With love,';
+            }
+            // Formal occasions or formal style
+            else if (formalOccasions.includes(occasion) || style === 'formal') {
+                return 'Sincerely,';
+            }
+            // Funny style
+            else if (style === 'funny') {
+                return 'Cheers,';
+            }
+            // Default for friendly occasions and style
+            else {
+                return 'With warmest regards,';
+            }
+        }
+
         // Update recipient placeholder when recipient name is entered
         recipientInput.addEventListener('input', function() {
             recipientPlaceholder.textContent = this.value || '[Recipient Name]';
@@ -449,7 +473,7 @@
                     cardContent.innerHTML = `
                         <div class="card-content-inner">
                             <div style="line-height: 1.6; margin-bottom: 1rem; white-space: pre-line;">${apiResult.generated_text}</div>
-                            <p style="line-height: 1.6; margin-bottom: 1rem;">With warmest regards,<br>${data.sender}</p>
+                            <p style="line-height: 1.6; margin-bottom: 1rem;">${getSignature(data.occasion, data.style)}<br>${data.sender}</p>
                             ${apiResult.image_suggestion ? `
                                 <div style="text-align: center; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #eee;">
                                     <div style="font-size: 3rem;">${apiResult.image_suggestion}</div>

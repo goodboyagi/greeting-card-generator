@@ -503,17 +503,29 @@ def generate_text():
 
 Style: {style}
 Sender name: {sender}
-Additional personal message from sender: {message if message else 'None'}
+{f"Personal message to incorporate: {message}" if message else ""}
 
 Please create a warm, personalized greeting card message that is:
 - Appropriate for the {occasion} occasion
 - Written in a {style} tone
 - Personal and heartfelt
 - Include the recipient's name naturally
-- If there's an additional message from the sender, incorporate it gracefully
+- If there's a personal message from the sender, incorporate it naturally into the flow
 - If inappropriate attributes are in the occasion or the message, remove them (items like violence, hate, nudity, bias, etc.)
 
-Keep the message concise but meaningful (2-3 sentences). Start with 'Dear [recipient name],' and then begin the message content on a new line. Do NOT include a signature line - the signature will be added separately."""
+Keep the message concise but meaningful (2-3 sentences). Start with 'Dear [recipient name],' and then begin the message content on a new line. 
+
+CRITICAL: You must NOT include ANY closing phrases, signatures, or ending lines. Do NOT write:
+- "With love"
+- "Warmly" 
+- "Best regards"
+- "Sincerely"
+- "With warmest regards"
+- "Cheers"
+- "Yours truly"
+- Any other closing phrase
+
+End your message with the last sentence of your greeting. The system will add the signature separately."""
 
         # Call OpenAI API with new format
         response = client.chat.completions.create(
