@@ -65,6 +65,17 @@
                 padding: 1.5rem;
                 margin-top: 1.5rem;
             }
+            
+            /* Reduce white card content padding on mobile */
+            .card-content-inner {
+                padding: 1.5rem !important;
+            }
+            
+            /* Reduce generated image padding on mobile */
+            .generated-image {
+                padding: 0.8rem;
+                margin-top: 1.5rem;
+            }
         }
 
         @media (max-width: 480px) {
@@ -95,6 +106,17 @@
             
             .result {
                 padding: 1rem;
+                margin-top: 1rem;
+            }
+            
+            /* Reduce white card content padding on mobile */
+            .card-content-inner {
+                padding: 1rem !important;
+            }
+            
+            /* Reduce generated image padding on mobile */
+            .generated-image {
+                padding: 0.5rem;
                 margin-top: 1rem;
             }
         }
@@ -407,7 +429,7 @@
                 if (apiResult.success) {
                     // Display the generated text
                     cardContent.innerHTML = `
-                        <div style="background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                        <div class="card-content-inner" style="background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
                             <div style="line-height: 1.6; margin-bottom: 1rem; white-space: pre-line;">${apiResult.generated_text}</div>
                             <p style="line-height: 1.6; margin-bottom: 1rem;">With warmest regards,<br>${data.sender}</p>
                             ${apiResult.image_suggestion ? `
