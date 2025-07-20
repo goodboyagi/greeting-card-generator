@@ -196,7 +196,7 @@
             background: rgba(102, 126, 234, 0.1);
             border-radius: 15px;
             border: 1px solid rgba(102, 126, 234, 0.2);
-            display: none;
+            display: block; /* Changed from 'none' to 'block' for debugging */
         }
 
         .result.show {
@@ -341,7 +341,29 @@
 
         <div class="result" id="result">
             <h3>Generated Greeting Card:</h3>
-            <div id="cardContent"></div>
+            <div id="cardContent">
+                <!-- Debug sample card - always visible for testing -->
+                <div class="card-content-inner">
+                    <div style="line-height: 1.6; margin-bottom: 1rem; white-space: pre-line;">Dear Sarah,
+
+Happy Birthday! 🎉
+
+I hope your special day is filled with joy, laughter, and wonderful surprises. You deserve all the happiness in the world.
+
+May this year bring you countless blessings and beautiful memories.</div>
+                    <p style="line-height: 1.6; margin-bottom: 1rem;">With warmest regards,<br>John</p>
+                    <div style="text-align: center; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #eee;">
+                        <div style="font-size: 3rem;">🎂</div>
+                    </div>
+                </div>
+                
+                <!-- Debug sample image -->
+                <div class="generated-image">
+                    <div style="background: #f0f0f0; padding: 2rem; border-radius: 10px; color: #666;">
+                        Sample Generated Image Placeholder
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
