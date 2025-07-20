@@ -80,11 +80,11 @@
 
         @media (max-width: 480px) {
             body {
-                padding: 0.25rem;
+                padding: 0.25rem; /* outer-padding: additional gap from phone screen edge */
             }
             
             .container {
-                padding: 1rem;
+                padding: 1rem; /* outer-padding: gap between phone screen and pale blue box */
                 margin: 0.25rem;
             }
             
@@ -105,13 +105,13 @@
             }
             
             .result {
-                padding: 0.3rem;
+                padding: 0.3rem; /* inner-padding: gap between pale blue box and white text box */
                 margin-top: 1rem;
             }
             
             /* Reduce white card content padding on mobile */
             .card-content-inner {
-                padding: 0.2rem !important;
+                padding: 0.2rem !important; /* inner-padding: white text box internal padding */
             }
             
             /* Reduce generated image padding on mobile */
