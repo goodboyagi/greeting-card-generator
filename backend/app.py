@@ -495,12 +495,14 @@ def generate_text():
         recipient = data.get('recipient', '')
         occasion = data.get('occasion', '')
         style = data.get('style', 'friendly')
+        sender = data.get('sender', '')
         message = data.get('message', '')
         
         # Create a detailed prompt for OpenAI
         prompt = f"""Create a personalized greeting card message for {recipient} for a {occasion} occasion. 
 
 Style: {style}
+Sender name: {sender}
 Additional personal message from sender: {message if message else 'None'}
 
 Please create a warm, personalized greeting card message that is:
@@ -511,7 +513,7 @@ Please create a warm, personalized greeting card message that is:
 - If there's an additional message from the sender, incorporate it gracefully
 - If inappropriate attributes are in the occasion or the message, remove them (items like violence, hate, nudity, bias, etc.)
 
-Keep the message concise but meaningful (2-3 sentences)."""
+Keep the message concise but meaningful (2-3 sentences). Start with 'Dear [recipient name],' and then begin the message content on a new line. Do NOT include a signature line - the signature will be added separately."""
 
         # Call OpenAI API with new format
         response = client.chat.completions.create(
