@@ -48,10 +48,11 @@ print(f"[INFO] Usage stats file: {USAGE_FILE}")
 # In-memory stats cache for better persistence
 STATS_CACHE = None
 
-# Secure sharing storage (in-memory for now, could be Redis/database later)
-SHARED_CARDS = {}  # {card_id: {data, expires_at, created_at}}
+# Secure sharing storage (file-based for persistence across server restarts)
+SHARED_CARDS_FILE = 'shared_cards.json'
+SHARED_CARDS_CACHE = {}  # Cache for performance
 
-# GitHub storage configuration
+# GitHub storage configuration (only for stats, not shared cards)
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
 GITHUB_REPO = 'goodboyagi/greeting-card-generator'
 GITHUB_STATS_FILE = 'production_stats.json'
@@ -588,8 +589,40 @@ def get_styles():
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
     """Get usage statistics"""
-    stats = load_usage_stats()
-    return jsonify(stats)
+    try:
+        stats = load_usage_stats()
+        return jsonify(stats)
+    except Exception as e:
+        print(f"[ERROR] Failed to get stats: {e}")
+        return jsonify({'error': 'Failed to load stats'}), 500
+
+@app.route('/api/debug/shared-cards', methods=['GET'])
+def debug_shared_cards():
+    """Debug endpoint to check shared cards status (development only)"""
+    try:
+        # Only allow in development
+        if os.environ.get('PORT', '5001') != '5001':
+            return jsonify({'error': 'Debug endpoint only available in development'}), 403
+        
+        with open(SHARED_CARDS_FILE, 'r') as f:
+            all_cards = json.load(f)
+        
+        # Count active and expired cards
+        current_time = time.time()
+        active_cards = {k: v for k, v in all_cards.items() if current_time < v['expires_at']}
+        expired_cards = {k: v for k, v in all_cards.items() if current_time >= v['expires_at']}
+        
+        return jsonify({
+            'total_cards': len(all_cards),
+            'active_cards': len(active_cards),
+            'expired_cards': len(expired_cards),
+            'cache_size': len(SHARED_CARDS_CACHE),
+            'file_path': os.path.abspath(SHARED_CARDS_FILE)
+        })
+    except FileNotFoundError:
+        return jsonify({'error': 'Shared cards file not found'}), 404
+    except Exception as e:
+        return jsonify({'error': f'Failed to read shared cards: {e}'}), 500
 
 @app.route('/api/share', methods=['POST'])
 def share_card():
@@ -616,6 +649,9 @@ def share_card():
         }
         
         card_id = store_shared_card(card_data)
+        
+        if not card_id:
+            return jsonify({'error': 'Failed to create shareable link - storage error'}), 500
         
         # Generate the shareable URL based on environment
         # Check if we're running locally (port 5001) vs production
@@ -872,49 +908,130 @@ def store_shared_card(card_data):
     card_id = generate_secure_card_id()
     expires_at = time.time() + (48 * 60 * 60)  # 48 hours from now
     
-    SHARED_CARDS[card_id] = {
-        'data': card_data,
-        'expires_at': expires_at,
-        'created_at': time.time()
-    }
-    
-    print(f"[INFO] Stored shared card {card_id}, expires at {datetime.fromtimestamp(expires_at)}")
-    return card_id
+    # Store in file
+    try:
+        if not os.path.exists(SHARED_CARDS_FILE):
+            with open(SHARED_CARDS_FILE, 'w') as f:
+                json.dump({}, f, indent=2)
+        
+        with open(SHARED_CARDS_FILE, 'r') as f:
+            all_cards = json.load(f)
+        
+        all_cards[card_id] = {
+            'data': card_data,
+            'expires_at': expires_at,
+            'created_at': time.time()
+        }
+        
+        with open(SHARED_CARDS_FILE, 'w') as f:
+            json.dump(all_cards, f, indent=2)
+        
+        print(f"[INFO] Stored shared card {card_id} in file, expires at {datetime.fromtimestamp(expires_at)}")
+        # Also cache it locally
+        SHARED_CARDS_CACHE[card_id] = all_cards[card_id]
+        return card_id
+    except Exception as e:
+        print(f"[ERROR] Failed to store shared card {card_id} in file: {e}")
+        return None
 
 def get_shared_card(card_id):
     """Retrieve a shared card if it exists and hasn't expired"""
-    if card_id not in SHARED_CARDS:
+    # Check cache first
+    if card_id in SHARED_CARDS_CACHE:
+        card_info = SHARED_CARDS_CACHE[card_id]
+        if time.time() < card_info['expires_at']:
+            return card_info['data']
+        else:
+            del SHARED_CARDS_CACHE[card_id]
+            print(f"[INFO] Expired shared card {card_id} removed from cache")
+            return None
+
+    # If not in cache, load from file
+    try:
+        with open(SHARED_CARDS_FILE, 'r') as f:
+            all_cards = json.load(f)
+            
+            # Find the card by ID
+            if card_id in all_cards:
+                card_info = all_cards[card_id]
+                # Check if expired
+                if time.time() < card_info['expires_at']:
+                    SHARED_CARDS_CACHE[card_id] = card_info # Cache it
+                    return card_info['data']
+                else:
+                    # Remove expired card from file
+                    del all_cards[card_id]
+                    # Save updated file
+                    with open(SHARED_CARDS_FILE, 'w') as f_write:
+                        json.dump(all_cards, f_write, indent=2)
+                    print(f"[INFO] Removed expired shared card {card_id} from file")
+                    return None
+            return None # Card not found
+    except FileNotFoundError:
+        print(f"[INFO] Shared cards file not found in file system.")
         return None
-    
-    card_info = SHARED_CARDS[card_id]
-    
-    # Check if expired
-    if time.time() > card_info['expires_at']:
-        del SHARED_CARDS[card_id]
-        print(f"[INFO] Expired shared card {card_id} removed")
+    except Exception as e:
+        print(f"[ERROR] Failed to load shared card {card_id} from file: {e}")
         return None
-    
-    return card_info['data']
 
 def cleanup_expired_cards():
     """Remove expired cards from storage"""
-    current_time = time.time()
-    expired_ids = [
-        card_id for card_id, card_info in SHARED_CARDS.items()
-        if current_time > card_info['expires_at']
-    ]
-    
-    for card_id in expired_ids:
-        del SHARED_CARDS[card_id]
-    
-    if expired_ids:
-        print(f"[INFO] Cleaned up {len(expired_ids)} expired shared cards")
+    try:
+        with open(SHARED_CARDS_FILE, 'r') as f:
+            all_cards = json.load(f)
+            
+            # Find expired cards
+            expired_ids = [
+                c_id for c_id, card_info in all_cards.items()
+                if time.time() > card_info['expires_at']
+            ]
+            
+            for card_id in expired_ids:
+                del all_cards[card_id]
+                # Also remove from cache
+                if card_id in SHARED_CARDS_CACHE:
+                    del SHARED_CARDS_CACHE[card_id]
+            
+            if expired_ids:
+                print(f"[INFO] Cleaned up {len(expired_ids)} expired shared cards from file")
+                
+                # Save updated file
+                with open(SHARED_CARDS_FILE, 'w') as f_write:
+                    json.dump(all_cards, f_write, indent=2)
+            else:
+                print(f"[INFO] No expired shared cards to clean up in file.")
+    except FileNotFoundError:
+        print(f"[INFO] Shared cards file not found in file system for cleanup.")
+    except Exception as e:
+        print(f"[ERROR] Failed to cleanup expired shared cards from file: {e}")
+
+def load_shared_cards_cache():
+    """Load shared cards from file into cache on startup"""
+    try:
+        if os.path.exists(SHARED_CARDS_FILE):
+            with open(SHARED_CARDS_FILE, 'r') as f:
+                all_cards = json.load(f)
+                
+            # Load non-expired cards into cache
+            current_time = time.time()
+            for card_id, card_info in all_cards.items():
+                if current_time < card_info['expires_at']:
+                    SHARED_CARDS_CACHE[card_id] = card_info
+            
+            print(f"[INFO] Loaded {len(SHARED_CARDS_CACHE)} shared cards into cache from file")
+        else:
+            print(f"[INFO] No shared cards file found, starting with empty cache")
+    except Exception as e:
+        print(f"[ERROR] Failed to load shared cards cache from file: {e}")
 
 if __name__ == '__main__':
     # Check if API keys are configured
     if not OPENAI_API_KEY:
         print("⚠️  Warning: OPENAI_API_KEY not found in environment variables")
         print("   Create a .env file with your API keys for full functionality")
+    
+    # Load shared cards cache from file
+    load_shared_cards_cache()
     
     # Get port from environment variable (for production) or use 5001 for local development
     port = int(os.environ.get('PORT', 5001))
