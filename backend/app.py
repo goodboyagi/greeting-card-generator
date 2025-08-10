@@ -659,8 +659,8 @@ def share_card():
             # Local development
             share_url = f"http://{request.headers.get('Host', 'localhost:5001')}/share/{card_id}"
         else:
-            # Production
-            share_url = f"https://goodboyagi.com/greeting-card-generator/share/{card_id}"
+            # Production - point to Render backend, not GitHub Pages
+            share_url = f"https://greeting-card-generator-api.onrender.com/share/{card_id}"
         
         return jsonify({
             'success': True,
