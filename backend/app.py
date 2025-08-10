@@ -654,11 +654,10 @@ def share_card():
             return jsonify({'error': 'Failed to create shareable link - storage error'}), 500
         
         # Generate the shareable URL based on environment
-        # Check if we're running locally (port 5001) vs production
-        current_port = os.environ.get('PORT', '5001')
-        if current_port == '5001' or current_port == 5001:
+        # Check if we're running locally vs production by looking at the request
+        if request.headers.get('Host', '').startswith('localhost') or request.headers.get('Host', '').startswith('127.0.0.1'):
             # Local development
-            share_url = f"http://localhost:5001/share/{card_id}"
+            share_url = f"http://{request.headers.get('Host', 'localhost:5001')}/share/{card_id}"
         else:
             # Production
             share_url = f"https://goodboyagi.com/greeting-card-generator/share/{card_id}"

@@ -379,6 +379,7 @@
                 <label for="occasion">Occasion:</label>
                 <select id="occasion" name="occasion" required>
                     <option value="">Select an occasion</option>
+                    <option value="holiday">Holiday</option>
                     <option value="birthday">Birthday</option>
                     <option value="anniversary">Anniversary</option>
                     <option value="wedding">Wedding</option>
@@ -387,7 +388,6 @@
                     <option value="congratulations">Congratulations</option>
                     <option value="get_well">Get Well Soon</option>
                     <option value="sympathy">Sympathy</option>
-                    <option value="holiday">Holiday</option>
                     <option value="custom">Custom Occasion</option>
                 </select>
             </div>
@@ -433,11 +433,46 @@
 
     <script>
         // Development mode toggle - change this to true for local testing
-        const DEV_MODE = true;
-        const DEBUG_SHARING = true; // Set to false to use real DALL-E images, true for dummy image
-        const API_BASE = DEV_MODE 
-            ? 'http://localhost:5001' 
-            : 'https://greeting-card-generator-api.onrender.com';
+        const DEV_MODE = false;
+        
+        // Debug sharing flag - only works locally, automatically disabled in production
+        // Set to true for local testing with dummy images (saves DALL-E credits)
+        // This will automatically be disabled when running on the live site
+        const DEBUG_SHARING = false;
+        
+        // Global variables for sharing functionality
+        let shareBtn = null;
+        let originalText = '';
+        
+        // API base URL - will be localhost for local development, production URL for live site
+        const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:5001' : 'https://greeting-card-generator-api.onrender.com';
+        
+        // Function to create a dummy image for debugging (saves DALL-E credits)
+        function createDummyImage(recipient, occasion) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            
+            // Create a simple gradient background
+            const gradient = ctx.createLinearGradient(0, 0, 512, 512);
+            gradient.addColorStop(0, '#667eea');
+            gradient.addColorStop(1, '#764ba2');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 512, 512);
+            
+            // Add text
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 32px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`Greeting Card for ${recipient}`, 256, 200);
+            ctx.font = '24px Arial';
+            ctx.fillText(`Occasion: ${occasion}`, 256, 250);
+            ctx.font = '18px Arial';
+            ctx.fillText('(Debug Mode - Dummy Image)', 256, 300);
+            
+            return canvas.toDataURL('image/png');
+        }
         
         const form = document.getElementById('cardForm');
         const generateBtn = document.getElementById('generateBtn');
@@ -526,9 +561,13 @@
             try {
                 let apiResult;
                 
-                if (DEBUG_SHARING) {
-                    // Debug mode: skip API call and use dummy data
-                    console.log('Debug mode: using dummy data instead of API call');
+                // Debug mode only works locally, automatically disabled in production
+                const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                const shouldUseDebug = DEBUG_SHARING && isLocalhost;
+                
+                if (shouldUseDebug) {
+                    // Debug mode: skip API call and use dummy data (LOCAL ONLY)
+                    console.log('Debug mode: using dummy data instead of API call (local only)');
                     apiResult = {
                         success: true,
                         generated_text: `Dear ${data.recipient},\n\nThis is a debug message for ${data.occasion}. In production, this would be AI-generated text.\n\n${getSignature(data.occasion, data.style)}\n${data.sender}`,
@@ -546,7 +585,7 @@
                             occasion: data.occasion,
                             style: data.style,
                             sender: data.sender,
-                        message: data.message
+                            message: data.message
                         })
                     });
 
@@ -613,33 +652,6 @@
                 generateBtn.textContent = 'Generate Greeting Card';
             }
         });
-
-        // Function to create a dummy image for debugging (saves DALL-E credits)
-        function createDummyImage(recipient, occasion) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 512;
-            canvas.height = 512;
-            const ctx = canvas.getContext('2d');
-            
-            // Create a simple gradient background
-            const gradient = ctx.createLinearGradient(0, 0, 512, 512);
-            gradient.addColorStop(0, '#667eea');
-            gradient.addColorStop(1, '#764ba2');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, 512, 512);
-            
-            // Add text
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 32px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(`Greeting Card for ${recipient}`, 256, 200);
-            ctx.font = '24px Arial';
-            ctx.fillText(`Occasion: ${occasion}`, 256, 250);
-            ctx.font = '18px Arial';
-            ctx.fillText('(Debug Mode - Dummy Image)', 256, 300);
-            
-            return canvas.toDataURL('image/png');
-        }
 
         // Function to generate a secure shareable link for the greeting card
         async function shareGreetingCard(imageUrl, formData, generatedText) {
