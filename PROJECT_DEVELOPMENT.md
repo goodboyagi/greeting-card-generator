@@ -1,7 +1,7 @@
 # 🎨 Greeting Card Generator - Project Development Roadmap
 
 ## 📋 Current Status
-- ✅ **Core functionality**: AI-powered text generation with GPT-3.5-turbo
+- ✅ **Core functionality**: AI-powered text generation with GPT-5o-mini
 - ✅ **Image generation**: DALL-E 3 integration with enhanced prompts
 - ✅ **Combined system**: Predefined prompts + AI object extraction
 - ✅ **Analytics**: Usage tracking and statistics dashboard

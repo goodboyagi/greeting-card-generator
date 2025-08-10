@@ -36,6 +36,7 @@ HUGGINGFACE_TOKEN = os.getenv('HUGGINGFACE_TOKEN')
 client = None
 if OPENAI_API_KEY:
     client = OpenAI(api_key=OPENAI_API_KEY)
+    print(f"[INFO] OpenAI client configured with GPT-4o-mini model")
 
 # Always use absolute path for usage stats file
 BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -98,10 +99,15 @@ Focus on:
 - Elements that match the style (friendly, formal, funny, romantic)
 - Visual elements that would enhance the message
 
+IMPORTANT: Focus on safe, greeting card-appropriate elements:
+- Flowers, candles, landscapes, objects, and symbolic elements
+- Nature scenes, architectural elements, and abstract designs
+- Celebration symbols, achievement markers, and thematic objects
+
 Return only a comma-separated list of objects, no explanations. Example: "flowers, candles, warm lighting" """
 
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are an expert at identifying visual elements for images."},
                 {"role": "user", "content": prompt}
@@ -295,58 +301,58 @@ def generate_dalle_image(occasion, style, recipient, generated_text, message):
         # Create a prompt for DALL-E based on the occasion, style, and content
         image_prompts = {
             'birthday': {
-                'friendly': f"Colorful birthday celebration with balloons, cake, and party decorations. Warm, cheerful atmosphere. NO TEXT, NO WORDS, NO LETTERS. Clean picture.",
-                'formal': f"Elegant birthday cake with candles, sophisticated celebration setting. Professional picture. NO TEXT, NO WORDS, NO LETTERS.",
-                'funny': f"Whimsical birthday scene with cartoon characters, confetti, and fun elements. Humorous picture. NO TEXT, NO WORDS, NO LETTERS.",
-                'romantic': f"Soft, romantic birthday scene with flowers, candles, and warm lighting. Loving picture. NO TEXT, NO WORDS, NO LETTERS."
+                'friendly': f"Colorful birthday celebration with balloons, cake, and party decorations. Warm, cheerful atmosphere. Clean picture.",
+                'formal': f"Elegant birthday cake with candles, sophisticated celebration setting. Professional picture.",
+                'funny': f"Whimsical birthday scene with cartoon characters, confetti, and fun elements. Humorous picture.",
+                'romantic': f"Soft, romantic birthday scene with flowers, candles, and warm lighting. Loving picture."
             },
             'anniversary': {
-                'friendly': f"Celebration of love and partnership with champagne glasses, flowers, and romantic setting. Warm picture. NO TEXT, NO WORDS, NO LETTERS.",
-                'formal': f"Elegant anniversary celebration with roses, fine dining setting, and sophisticated atmosphere. Formal picture. NO TEXT, NO WORDS, NO LETTERS.",
-                'funny': f"Playful anniversary scene with cartoon hearts, funny elements, and celebration. Humorous picture. NO TEXT, NO WORDS, NO LETTERS.",
-                'romantic': f"Romantic anniversary scene with roses, candles, and intimate setting. Loving picture. NO TEXT, NO WORDS, NO LETTERS."
+                'friendly': f"Celebration of love and partnership with champagne glasses, flowers, and romantic setting. Warm picture.",
+                'formal': f"Elegant anniversary celebration with roses, fine dining setting, and sophisticated atmosphere. Formal picture.",
+                'funny': f"Playful anniversary scene with cartoon hearts, funny elements, and celebration. Humorous picture.",
+                'romantic': f"Romantic anniversary scene with roses, candles, and intimate setting. Loving picture."
             },
             'wedding': {
-                'friendly': f"Beautiful wedding celebration with flowers, rings, and happy atmosphere. Warm picture. NO TEXT, NO WORDS, NO LETTERS.",
-                'formal': f"Elegant wedding scene with white flowers, rings, and sophisticated setting. Formal picture. NO TEXT, NO WORDS, NO LETTERS.",
-                'funny': f"Playful wedding scene with cartoon elements and celebration. Humorous picture. NO TEXT, NO WORDS, NO LETTERS.",
-                'romantic': f"Romantic wedding scene with roses, rings, and dreamy atmosphere. Loving picture. NO TEXT, NO WORDS, NO LETTERS."
+                'friendly': f"Beautiful wedding celebration with flowers, rings, and happy atmosphere. Warm picture.",
+                'formal': f"Elegant wedding scene with white flowers, rings, and sophisticated setting. Formal picture.",
+                'funny': f"Playful wedding scene with cartoon elements and celebration. Humorous picture.",
+                'romantic': f"Romantic wedding scene with roses, rings, and dreamy atmosphere. Loving picture."
             },
             'graduation': {
-                'friendly': f"Graduation celebration with cap, diploma, and achievement symbols. Warm picture. NO TEXT, NO WORDS, NO LETTERS.",
-                'formal': f"Elegant graduation scene with academic symbols and formal setting. Professional picture. NO TEXT, NO WORDS, NO LETTERS.",
-                'funny': f"Playful graduation scene with cartoon elements and celebration. Humorous picture. NO TEXT, NO WORDS, NO LETTERS.",
-                'romantic': f"Romantic graduation scene with flowers and achievement celebration. Loving picture. NO TEXT, NO WORDS, NO LETTERS."
+                'friendly': f"Graduation celebration with cap, diploma, and achievement symbols. Warm picture.",
+                'formal': f"Elegant graduation scene with academic symbols and formal setting. Professional picture.",
+                'funny': f"Playful graduation scene with cartoon elements and celebration. Humorous picture.",
+                'romantic': f"Romantic graduation scene with flowers and achievement celebration. Loving picture."
             },
             'thank_you': {
-                'friendly': f"Gratitude scene with flowers, thank you symbols, and warm atmosphere. Friendly picture. NO TEXT, NO WORDS, NO LETTERS.",
-                'formal': f"Elegant thank you scene with formal flowers and sophisticated setting. Professional picture. NO TEXT, NO WORDS, NO LETTERS.",
-                'funny': f"Playful thank you scene with cartoon elements and fun symbols. Humorous picture. NO TEXT, NO WORDS, NO LETTERS.",
-                'romantic': f"Romantic thank you scene with roses and loving atmosphere. Sweet picture. NO TEXT, NO WORDS, NO LETTERS."
+                'friendly': f"Gratitude scene with flowers, thank you symbols, and warm atmosphere. Friendly picture.",
+                'formal': f"Elegant thank you scene with formal flowers and sophisticated setting. Professional picture.",
+                'funny': f"Playful thank you scene with cartoon elements and fun symbols. Humorous picture.",
+                'romantic': f"Romantic thank you scene with roses and loving atmosphere. Sweet picture."
             },
             'congratulations': {
-                'friendly': f"Victory celebration scene with confetti, trophies, achievement symbols, and warm atmosphere. NOT a birthday party. Friendly picture. NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO WRITING, NO BIRTHDAY CAKES, NO BALLOONS.",
-                'formal': f"Elegant congratulations scene with formal celebration elements, awards, and sophisticated atmosphere. NOT a birthday party. Professional picture. NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO WRITING, NO BIRTHDAY CAKES, NO BALLOONS.",
-                'funny': f"Playful congratulations scene with cartoon celebration elements, fun symbols, and humorous atmosphere. NOT a birthday party. Humorous picture. NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO WRITING, NO BIRTHDAY CAKES, NO BALLOONS.",
-                'romantic': f"Romantic congratulations scene with flowers and loving celebration atmosphere. NOT a birthday party. Sweet picture. NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO WRITING, NO BIRTHDAY CAKES, NO BALLOONS."
+                'friendly': f"Victory celebration scene with confetti, trophies, achievement symbols, and warm atmosphere. Friendly picture.",
+                'formal': f"Elegant congratulations scene with formal celebration elements, awards, and sophisticated atmosphere. Professional picture.",
+                'funny': f"Playful congratulations scene with cartoon celebration elements, fun symbols, and humorous atmosphere. Humorous picture.",
+                'romantic': f"Romantic congratulations scene with flowers and loving celebration atmosphere. Sweet picture."
             },
             'get_well': {
-                'friendly': f"Healing scene with flowers, get well symbols, and warm atmosphere. Caring picture. NO TEXT, NO WORDS, NO LETTERS.",
-                'formal': f"Elegant get well scene with formal flowers and healing symbols. Professional picture. NO TEXT, NO WORDS, NO LETTERS.",
-                'funny': f"Playful get well scene with cartoon healing elements. Humorous picture. NO TEXT, NO WORDS, NO LETTERS.",
-                'romantic': f"Romantic get well scene with roses and caring atmosphere. Loving picture. NO TEXT, NO WORDS, NO LETTERS."
+                'friendly': f"Healing scene with flowers, get well symbols, and warm atmosphere. Caring picture.",
+                'formal': f"Elegant get well scene with formal flowers and healing symbols. Professional picture.",
+                'funny': f"Playful get well scene with cartoon healing elements. Humorous picture.",
+                'romantic': f"Romantic get well scene with roses and caring atmosphere. Loving picture."
             },
             'sympathy': {
-                'friendly': f"Peaceful sympathy scene with white flowers and calming atmosphere. Caring picture. NO TEXT, NO WORDS, NO LETTERS.",
-                'formal': f"Elegant sympathy scene with formal white flowers and respectful setting. Professional picture. NO TEXT, NO WORDS, NO LETTERS.",
-                'funny': f"Gentle sympathy scene with soft colors and caring elements. Thoughtful picture. NO TEXT, NO WORDS, NO LETTERS.",
-                'romantic': f"Romantic sympathy scene with white roses and loving atmosphere. Caring picture. NO TEXT, NO WORDS, NO LETTERS."
+                'friendly': f"Peaceful sympathy scene with white flowers and calming atmosphere. Caring picture.",
+                'formal': f"Elegant sympathy scene with formal white flowers and respectful setting. Professional picture.",
+                'funny': f"Gentle sympathy scene with soft colors and caring elements. Thoughtful picture.",
+                'romantic': f"Romantic sympathy scene with white roses and loving atmosphere. Caring picture."
             },
             'holiday': {
-                'friendly': f"Holiday celebration scene with festive decorations and warm atmosphere. Friendly picture. NO TEXT, NO WORDS, NO LETTERS.",
-                'formal': f"Elegant holiday scene with formal decorations and sophisticated setting. Professional picture. NO TEXT, NO WORDS, NO LETTERS.",
-                'funny': f"Playful holiday scene with cartoon festive elements. Humorous picture. NO TEXT, NO WORDS, NO LETTERS.",
-                'romantic': f"Romantic holiday scene with festive flowers and loving atmosphere. Sweet picture. NO TEXT, NO WORDS, NO LETTERS."
+                'friendly': f"Holiday celebration scene with festive decorations and warm atmosphere. Friendly picture.",
+                'formal': f"Elegant holiday scene with formal decorations and sophisticated setting. Professional picture.",
+                'funny': f"Playful holiday scene with cartoon festive elements. Humorous picture.",
+                'romantic': f"Romantic holiday scene with festive flowers and loving atmosphere. Sweet picture."
             }
         }
         
@@ -359,19 +365,19 @@ def generate_dalle_image(occasion, style, recipient, generated_text, message):
         else:
             # Create a generic celebration prompt for custom occasions
             style_celebrations = {
-                'friendly': f"Warm celebration scene with flowers, decorations, and joyful atmosphere for {occasion}. Perfect picture. NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO WRITING.",
-                'formal': f"Elegant celebration scene with sophisticated decorations and formal atmosphere for {occasion}. Professional picture. NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO WRITING.",
-                'funny': f"Playful celebration scene with cartoon elements and fun decorations for {occasion}. Humorous picture. NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO WRITING.",
-                'romantic': f"Romantic celebration scene with soft lighting and loving atmosphere for {occasion}. Sweet picture. NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO WRITING."
+                'friendly': f"Warm celebration scene with flowers, decorations, and joyful atmosphere for {occasion}. Perfect picture.",
+                'formal': f"Elegant celebration scene with sophisticated decorations and formal atmosphere for {occasion}. Professional picture.",
+                'funny': f"Playful celebration scene with cartoon elements and fun decorations for {occasion}. Humorous picture.",
+                'romantic': f"Romantic celebration scene with soft lighting and loving atmosphere for {occasion}. Sweet picture."
             }
             prompt = style_celebrations.get(style, style_celebrations['friendly'])
         
-        # Add style-specific instructions
+        # Add style-specific instructions with positive focus
         style_instructions = {
-            'friendly': "Use warm, bright colors and friendly imagery. Clean, minimalist picture suitable for printing.",
-            'formal': "Use elegant, sophisticated colors and formal imagery. Clean, professional picture suitable for printing.",
-            'funny': "Use playful, cartoon-style imagery with bright colors. Clean, fun picture suitable for printing.",
-            'romantic': "Use soft, romantic colors and loving imagery. Clean, elegant picture suitable for printing."
+            'friendly': "Use warm, bright colors and friendly imagery. Clean, minimalist picture suitable for printing. Focus on objects, nature, flowers, and abstract elements.",
+            'formal': "Use elegant, sophisticated colors and formal imagery. Clean, professional picture suitable for printing. Focus on objects, architecture, landscapes, and abstract elements.",
+            'funny': "Use playful, cartoon-style imagery with bright colors. Clean, fun picture suitable for printing. Focus on objects, symbols, and abstract elements.",
+            'romantic': "Use soft, romantic colors and loving imagery. Clean, elegant picture suitable for printing. Focus on objects, flowers, candles, and abstract elements."
         }
         
         # Extract context from generated text to improve image relevance
@@ -411,7 +417,7 @@ def generate_dalle_image(occasion, style, recipient, generated_text, message):
         context_prompt = " " + " ".join(context_keywords) if context_keywords else ""
         
         # Create a clean, professional prompt that focuses on the visual picture
-        full_prompt = f"{prompt}{context_prompt} {style_instructions.get(style, '')} Create a clean, professional greeting card background image with ABSOLUTELY NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO WRITING, NO SPEECH BUBBLES, NO SIGNS, NO BIRTHDAY CAKES, NO BALLOONS, NO PARTY DECORATIONS. The image should be suitable for printing and email sharing. Focus on beautiful visual elements only. IMPORTANT: This is a background image for a greeting card, not a greeting card with text on it. DO NOT include any birthday elements or party decorations."
+        full_prompt = f"{prompt}{context_prompt} {style_instructions.get(style, '')} Create a clean, professional greeting card background image. The image should be suitable for printing and email sharing. Focus on beautiful visual elements - objects, nature, landscapes, symbols, and abstract elements. IMPORTANT: This is a background image for a greeting card, not a greeting card with text on it."
         
         # Generate image using DALL-E
         '''
@@ -448,7 +454,10 @@ def generate_dalle_image(occasion, style, recipient, generated_text, message):
             'romantic': "Use soft, romantic colors and loving imagery with photorealistic elements when possible."
         }
         
-        final_prompt = f"{enhanced_prompt} {style_instructions.get(style, '')} NO TEXT, NO WORDS, NO LETTERS, NO TYPOGRAPHY, NO WRITING, NO BANNERS, NO SIGNS. Focus on beautiful visual elements only."
+        # Focus on positive instructions since DALL-E doesn't support negative prompts
+        quality_instructions = "Create a beautiful, high-quality image with perfect proportions and realistic elements. Focus on objects, nature, landscapes, and symbolic elements. Ensure all visual elements are clear, well-defined, and suitable for a greeting card background."
+        
+        final_prompt = f"{enhanced_prompt} {style_instructions.get(style, '')} {quality_instructions} Focus on beautiful visual elements only."
         
         print(f"[DALL-E PROMPT] {final_prompt}")
         response = client.images.generate(
@@ -529,7 +538,7 @@ End your message with the last sentence of your greeting. The system will add th
 
         # Call OpenAI API with new format
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a creative greeting card writer who creates personalized, warm, and appropriate messages for various occasions."},
                 {"role": "user", "content": prompt}

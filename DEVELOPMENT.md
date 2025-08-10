@@ -2,12 +2,12 @@
 
 ## 📋 Project Overview
 
-A full-stack AI application that generates personalized greeting cards using OpenAI's GPT-3.5-turbo model.
+A full-stack AI application that generates personalized greeting cards using OpenAI's GPT-5o-mini model.
 
 ### 🏗️ Architecture
 - **Frontend**: HTML/CSS/JavaScript (GitHub Pages)
 - **Backend**: Flask API (Render)
-- **AI**: OpenAI GPT-3.5-turbo
+- **AI**: OpenAI GPT-5o-mini
 - **Analytics**: Built-in usage tracking
 
 ### 🌐 Live URLs

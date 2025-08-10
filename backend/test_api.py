@@ -31,7 +31,7 @@ def test_openai_api():
         # Test with a simple request
         print("🧪 Testing OpenAI API...")
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "user", "content": "Say 'Hello from Good Boy AGI!' in a friendly way"}
             ],
