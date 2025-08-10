@@ -96,6 +96,27 @@
                 padding: 0.8rem;
                 margin-top: 1.5rem;
             }
+            
+            /* Progress indicator mobile styles */
+            .progress-container {
+                margin-top: 0.8rem;
+            }
+            
+            .progress-text {
+                font-size: 0.8rem;
+            }
+            
+            .progress-time {
+                font-size: 0.9rem;
+            }
+            
+            .generating-status {
+                font-size: 0.9rem;
+            }
+            
+            .progress-percentage {
+                font-size: 1rem;
+            }
         }
 
         @media (max-width: 480px) {
@@ -138,6 +159,27 @@
             .generated-image {
                 padding: 0.1rem;
                 margin-top: 1rem;
+            }
+            
+            /* Progress indicator mobile styles */
+            .progress-container {
+                margin-top: 0.5rem;
+            }
+            
+            .progress-text {
+                font-size: 0.75rem;
+            }
+            
+            .progress-time {
+                font-size: 0.8rem;
+            }
+            
+            .generating-status {
+                font-size: 0.8rem;
+            }
+            
+            .progress-percentage {
+                font-size: 0.9rem;
             }
         }
 
@@ -208,6 +250,77 @@
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
+        }
+
+        /* Progress indicator styles */
+        .progress-container {
+            display: none;
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e1e5e9;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            animation: progress-animation 30s linear;
+        }
+
+        @keyframes progress-animation {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+
+        .progress-text {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-time {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .progress-percentage {
+            color: #764ba2;
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin: 0.5rem 0;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .generating-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 0.5rem;
         }
 
         .result {
@@ -421,6 +534,20 @@
             <button type="submit" class="generate-btn" id="generateBtn">
                 Generate Greeting Card
             </button>
+            
+            <!-- Progress indicator -->
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-text">🎨 AI is crafting your personalized greeting card...</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-time">⏱️ This typically takes about 30 seconds</div>
+                <div class="progress-percentage" id="progressPercentage">0%</div>
+                <div class="generating-status">
+                    <div class="spinner"></div>
+                    <span>Generating text with GPT-4o-mini...</span>
+                </div>
+            </div>
         </form>
 
         <div class="error" id="error"></div>
@@ -533,6 +660,48 @@
             generateBtn.textContent = 'Generating...';
             result.classList.remove('show');
             error.style.display = 'none';
+            
+            // Show progress indicator immediately for instant feedback
+            const progressContainer = document.getElementById('progressContainer');
+            const progressFill = document.getElementById('progressFill');
+            progressContainer.style.display = 'block';
+            
+            // Reset progress bar state
+            progressFill.style.animation = 'none';
+            progressFill.style.background = 'linear-gradient(45deg, #667eea, #764ba2)';
+            progressFill.style.boxShadow = 'none';
+            document.getElementById('progressPercentage').textContent = '0%';
+            
+            // Start progress animation with a slight delay for better UX
+            setTimeout(() => {
+                progressFill.style.animation = 'progress-animation 30s linear';
+                
+                // Add completion effect when animation ends
+                progressFill.addEventListener('animationend', () => {
+                    progressFill.style.background = 'linear-gradient(45deg, #4CAF50, #45a049)';
+                    progressFill.style.boxShadow = '0 0 20px rgba(76, 175, 80, 0.5)';
+                }, { once: true });
+            }, 100);
+            
+            // Update status messages during generation
+            let statusIndex = 0;
+            const statusMessages = [
+                'Generating text with GPT-4o-mini...',
+                'Creating personalized message...',
+                'Generating image with DALL-E 3...',
+                'Finalizing your greeting card...'
+            ];
+            
+            const statusElement = progressContainer.querySelector('.generating-status span');
+            const progressPercentage = document.getElementById('progressPercentage');
+            
+            // Update status and percentage every 7.5 seconds
+            const statusInterval = setInterval(() => {
+                statusElement.textContent = statusMessages[statusIndex];
+                const percentage = Math.round(((statusIndex + 1) / statusMessages.length) * 100);
+                progressPercentage.textContent = `${percentage}%`;
+                statusIndex = (statusIndex + 1) % statusMessages.length;
+            }, 7500); // Change every 7.5 seconds (30s total / 4 messages)
 
             const formData = new FormData(form);
             let occasion = formData.get('occasion');
@@ -648,6 +817,13 @@
                 error.textContent = `Failed to connect to API: ${apiError.message}`;
                 error.style.display = 'block';
             } finally {
+                // Clear the status update interval
+                clearInterval(statusInterval);
+                
+                // Hide progress indicator
+                progressContainer.style.display = 'none';
+                progressFill.style.animation = 'none';
+                
                 generateBtn.disabled = false;
                 generateBtn.textContent = 'Generate Greeting Card';
             }
@@ -658,14 +834,14 @@
             // Show loading state on share button
             const shareBtn = document.getElementById('shareBtn');
             const originalText = shareBtn.textContent;
-            shareBtn.textContent = 'Generating...';
+            shareBtn.innerHTML = '<div class="spinner"></div>Generating...';
             shareBtn.disabled = true;
             
             // Add a safety timeout to restore button if something goes wrong
             const safetyTimeout = setTimeout(() => {
-                if (shareBtn.textContent === 'Generating...') {
+                if (shareBtn.innerHTML.includes('Generating...')) {
                     console.log('Safety timeout: restoring share button');
-                    shareBtn.textContent = originalText;
+                    shareBtn.innerHTML = originalText;
                     shareBtn.disabled = false;
                 }
             }, 10000); // 10 second timeout
@@ -711,7 +887,7 @@
                 
                 // Restore share button
                 if (shareBtn) {
-                    shareBtn.textContent = originalText;
+                    shareBtn.innerHTML = originalText;
                     shareBtn.disabled = false;
                 }
             }
