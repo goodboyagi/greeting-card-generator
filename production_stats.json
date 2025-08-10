@@ -1,23 +1,22 @@
 {
-  "total_requests": 30,
-  "successful_requests": 30,
-  "failed_requests": 0,
-  "last_request": "2025-08-10T02:01:48.894163",
+  "total_requests": 64,
+  "successful_requests": 63,
+  "failed_requests": 1,
+  "last_request": "2025-08-09T19:10:55.620582",
   "requests_by_occasion": {
-    "congratulations": 14,
-    "Upanayanam": 2,
-    "Ganesh Chaturthi": 1,
-    "New job": 1,
-    "Sathabhishekam": 1,
-    "holiday": 1,
-    "Vinayaka Chaturthi": 5,
-    "birthday": 3,
-    "wedding": 1,
-    "sympathy": 1
+    "congratulations": 37,
+    "birthday": 4,
+    "Eid Mubarak": 1,
+    "anniversary": 10,
+    "wedding": 2,
+    "graduation": 1,
+    "sympathy": 8,
+    "get_well": 1
   },
   "requests_by_style": {
-    "formal": 23,
-    "funny": 6,
-    "friendly": 1
+    "funny": 39,
+    "friendly": 13,
+    "formal": 7,
+    "romantic": 5
   }
 }
