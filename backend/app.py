@@ -138,6 +138,183 @@ Return only a comma-separated list of objects, no explanations. Example: "flower
         print(f"Error extracting objects: {str(e)}")
         return []
 
+def analyze_uploaded_images(uploaded_images):
+    """
+    Analyzes uploaded images using GPT-4o-mini vision API to extract visual elements,
+    style, mood, and themes that can be incorporated into the greeting card.
+    """
+    if not uploaded_images or not client:
+        return []
+    
+    image_analyses = []
+    
+    for i, img_data in enumerate(uploaded_images):
+        try:
+                            # Extract base64 data from the image
+                # The frontend sends dataUrl which includes "data:image/jpeg;base64," prefix
+                if 'dataUrl' in img_data:
+                    caption = img_data.get('caption', '')
+                    file_name = img_data.get('fileName', f'Image {i+1}')
+                    data_url = img_data.get('dataUrl', '')
+                    
+                    if data_url and data_url.startswith('data:image/'):
+                        try:
+                            # Create vision API prompt for image analysis
+                            vision_prompt = f"""Analyze this image for a greeting card. Extract and describe:
+
+1. Key visual objects and elements (be specific about what you see)
+2. Overall style and aesthetic (modern, vintage, minimalist, etc.)
+3. Mood and emotional tone (cheerful, peaceful, energetic, etc.)
+4. Themes that could enhance a greeting card (nature, celebration, love, etc.)
+
+Caption: {caption or 'No caption provided'}
+
+Focus on elements that would work well in a greeting card design. Be concise but descriptive."""
+                            
+                            # Call GPT-4o-mini vision API
+                            response = client.chat.completions.create(
+                                model="gpt-4o-mini",
+                                messages=[
+                                    {"role": "user", "content": [
+                                        {"type": "text", "text": vision_prompt},
+                                        {"type": "image_url", "image_url": {"url": data_url}}
+                                    ]}
+                                ],
+                                max_tokens=300,
+                                temperature=0.3
+                            )
+                            
+                            # Parse the response to extract structured information
+                            analysis_text = response.choices[0].message.content.strip()
+                            
+                            # Extract key elements from the analysis
+                            extracted_elements = []
+                            style_analysis = ""
+                            mood_analysis = ""
+                            themes = []
+                            
+                            # Simple parsing of the response to extract key information
+                            lines = analysis_text.split('\n')
+                            for line in lines:
+                                line = line.strip().lower()
+                                                            # Only process bullet point lines (actual content), skip headers
+                            if line.startswith('-') or line.startswith('•'):
+                                # Handle bullet points - extract concise elements
+                                element = line[1:].strip()
+                                if element and len(element) > 2:
+                                    # Clean up markdown formatting first
+                                    clean_element = element.replace('**', '').replace('*', '').replace(':', '')
+                                    clean_element = clean_element.replace('(', '').replace(')', '').replace('-', ',')
+                                    
+                                    # Only extract meaningful, short elements
+                                    if len(clean_element) < 50:  # Only short, concise elements
+                                        if clean_element and len(clean_element) > 2:
+                                            extracted_elements.append(clean_element)
+                                    else:
+                                        # For longer elements, try to extract key words
+                                        words = clean_element.split()
+                                        key_words = [w for w in words if len(w) > 3 and w.lower() not in ['the', 'and', 'for', 'with', 'this', 'that', 'from', 'into', 'during', 'including', 'until', 'against', 'among', 'throughout', 'despite', 'towards', 'upon', 'suitable', 'related', 'suggests', 'elements', 'gathering', 'achievement', 'theme', 'adapted', 'commemorating', 'exciting', 'personal', 'victories', 'action', 'oriented', 'highlights', 'themes', 'nature', 'outdoors', 'appealing', 'related', 'travel', 'appreciation', 'here', 'analysis', 'based', 'provided', 'image', 'poster', 'key', 'visual', 'objects', 'elements']]
+                                        if key_words:
+                                            extracted_elements.extend(key_words[:3])  # Limit to 3 key words
+                                elif 'style' in line:
+                                    if ':' in line:
+                                        style_analysis = line.split(':')[1].strip()
+                                elif 'mood' in line or 'tone' in line:
+                                    if ':' in line:
+                                        mood_analysis = line.split(':')[1].strip()
+                                elif 'themes' in line:
+                                    if ':' in line:
+                                        themes_text = line.split(':')[1].strip()
+                                        themes = [t.strip() for t in themes_text.split(',') if t.strip()]
+                            
+                            # Clean up extracted elements to remove formatting artifacts
+                            if extracted_elements:
+                                # Remove any remaining formatting artifacts
+                                extracted_elements = [elem.replace('**', '').replace('*', '').replace(':', '').replace(',', '').strip() for elem in extracted_elements]
+                                extracted_elements = [elem for elem in extracted_elements if elem and len(elem) > 2]  # Re-filter after cleaning
+                                
+                                # Filter out garbage text that contains problematic words
+                                garbage_words = ['key', 'visual', 'objects', 'elements', 'here', 'analysis', 'based', 'provided', 'image', 'poster', 'theme', 'adapted', 'commemorating', 'exciting', 'personal', 'victories', 'action', 'oriented', 'highlights', 'themes', 'nature', 'outdoors', 'appealing', 'related', 'travel', 'appreciation']
+                                extracted_elements = [elem for elem in extracted_elements if not any(garbage_word in elem.lower() for garbage_word in garbage_words)]
+                                
+                                extracted_elements = list(set(extracted_elements))  # Remove duplicates
+                            
+                            # If parsing didn't work well, check if this is a failed analysis
+                            if not extracted_elements and not style_analysis and not mood_analysis:
+                                # Check if this looks like a failed analysis
+                                if any(keyword in analysis_text.lower() for keyword in ['unable', 'cannot', 'failed', 'error', 'sorry']):
+                                    # This is a failed analysis, don't create fallback elements
+                                    extracted_elements = []
+                                else:
+                                    # Fallback: extract key phrases from the analysis (only if it looks successful)
+                                    words = analysis_text.lower().split()
+                                    extracted_elements = [word for word in words if len(word) > 3 and word not in ['the', 'and', 'for', 'with', 'this', 'that', 'from', 'into', 'during', 'including', 'until', 'against', 'among', 'throughout', 'despite', 'towards', 'upon']]
+                                    extracted_elements = extracted_elements[:8]  # Limit to 8 elements
+                            
+                            analysis = {
+                                'image_index': i + 1,
+                                'file_name': file_name,
+                                'caption': caption,
+                                'extracted_elements': extracted_elements,
+                                'style_analysis': style_analysis or analysis_text.split('.')[0] if analysis_text else '',
+                                'mood_analysis': mood_analysis or analysis_text.split('.')[1] if len(analysis_text.split('.')) > 1 else '',
+                                'themes': themes,
+                                'vision_api_used': True,
+                                'full_analysis': analysis_text
+                            }
+                            
+                            print(f"[VISION API ANALYSIS {i+1}] {file_name}: {analysis_text[:100]}...")
+                            print(f"[DEBUG] Extracted elements: {extracted_elements}")
+                            print(f"[DEBUG] Style analysis: {style_analysis}")
+                            print(f"[DEBUG] Mood analysis: {mood_analysis}")
+                            print(f"[DEBUG] Themes: {themes}")
+                            
+                        except Exception as e:
+                            print(f"Error calling vision API for image {i+1}: {str(e)}")
+                            # Fallback to basic analysis
+                            analysis = {
+                                'image_index': i + 1,
+                                'file_name': file_name,
+                                'caption': caption,
+                                'extracted_elements': [],
+                                'style_analysis': 'Vision API analysis failed',
+                                'mood_analysis': 'Vision API analysis failed',
+                                'themes': [],
+                                'vision_api_used': False,
+                                'full_analysis': f'Error: {str(e)}'
+                            }
+                    else:
+                        # No valid image data
+                        analysis = {
+                            'image_index': i + 1,
+                            'file_name': file_name,
+                            'caption': caption,
+                            'extracted_elements': [],
+                            'style_analysis': 'No image data available',
+                            'mood_analysis': 'No image data available',
+                            'themes': [],
+                            'vision_api_used': False,
+                            'full_analysis': 'No image data provided'
+                        }
+                    
+                    image_analyses.append(analysis)
+                    print(f"[IMAGE ANALYSIS {i+1}] {file_name}: {caption or 'No caption'}")
+                
+        except Exception as e:
+            print(f"Error analyzing image {i+1}: {str(e)}")
+            image_analyses.append({
+                'image_index': i + 1,
+                'file_name': f'Image {i+1}',
+                'caption': 'Error analyzing image',
+                'extracted_elements': [],
+                'style_analysis': 'Analysis failed',
+                'mood_analysis': 'Analysis failed',
+                'themes': [],
+                'vision_api_used': False
+            })
+    
+    return image_analyses
+
 def load_usage_stats():
     """Load usage statistics from file or environment variables"""
     global STATS_CACHE
@@ -307,7 +484,7 @@ def get_image_suggestion(occasion, style):
     
     return image
 
-def generate_dalle_image(occasion, style, recipient, generated_text, message):
+def generate_dalle_image(occasion, style, recipient, generated_text, message, image_analyses=None):
     """Generate an image using DALL-E based on the greeting card content"""
     try:
         # Create a prompt for DALL-E based on the occasion, style, and content
@@ -458,6 +635,59 @@ def generate_dalle_image(occasion, style, recipient, generated_text, message):
             scene_description = extract_scene_keywords(recipient, occasion, message or "", generated_text)
             enhanced_prompt = f"{base_prompt} Enhanced with: {scene_description}."
         
+        # Enhance with uploaded image analysis if available
+        if image_analyses and len(image_analyses) > 0:
+            print(f"[INFO] Enhancing DALL-E prompt with {len(image_analyses)} image analyses...")
+            
+            # Filter out failed analyses and only use successful ones
+            # Check for meaningful extracted elements (not just random words from failed analysis)
+            successful_analyses = []
+            for a in image_analyses:
+                if (a.get('vision_api_used', False) and 
+                    a.get('extracted_elements') and 
+                    len(a.get('extracted_elements', [])) > 0 and
+                    not any('unable' in elem.lower() or 'analyze' in elem.lower() or 'image' in elem.lower() or 'provided' in elem.lower() for elem in a.get('extracted_elements', []))):
+                    successful_analyses.append(a)
+            print(f"[INFO] Using {len(successful_analyses)} successful analyses out of {len(image_analyses)} total")
+            
+            image_enhancements = []
+            for analysis in successful_analyses:
+                if analysis.get('caption'):
+                    image_enhancements.append(f"'{analysis['caption']}' theme")
+                if analysis.get('extracted_elements'):
+                    elements = ", ".join(analysis['extracted_elements'])
+                    if elements:
+                        image_enhancements.append(elements)
+                if analysis.get('themes'):
+                    themes = ", ".join(analysis['themes'])
+                    if themes:
+                        image_enhancements.append(themes)
+            
+            if image_enhancements:
+                # Filter out overly verbose enhancements to keep prompt concise
+                concise_enhancements = []
+                for enhancement in image_enhancements:
+                    if len(enhancement) < 100:  # Only keep concise enhancements
+                        concise_enhancements.append(enhancement)
+                    else:
+                        # For verbose enhancements, extract key words
+                        words = enhancement.split()
+                        key_words = [w for w in words if len(w) > 3 and w.lower() not in ['the', 'and', 'for', 'with', 'this', 'that', 'from', 'into', 'during', 'including', 'until', 'against', 'among', 'throughout', 'despite', 'towards', 'upon', 'suitable', 'related', 'suggests', 'elements', 'gathering', 'achievement', 'perfect', 'cards', 'related', 'birthdays', 'congratulations']]
+                        if key_words:
+                            concise_enhancements.append(' '.join(key_words[:5]))  # Limit to 5 key words
+                
+                if concise_enhancements:
+                    image_enhancement_text = " ".join(concise_enhancements)
+                    enhanced_prompt = f"{enhanced_prompt} Incorporating personal image elements: {image_enhancement_text}."
+                    print(f"[IMAGE ENHANCEMENT] Added to DALL-E prompt: {image_enhancement_text}")
+                else:
+                    print(f"[INFO] No concise image enhancements available")
+            else:
+                print(f"[INFO] No successful image analyses to enhance prompt with")
+        
+        # Log the enhanced prompt for debugging
+        print(f"[ENHANCED PROMPT] {enhanced_prompt}")
+        
         # Add style-specific instructions
         style_instructions = {
             'friendly': "Use warm, bright colors and friendly imagery.",
@@ -518,6 +748,12 @@ def generate_text():
         style = data.get('style', 'friendly')
         sender = data.get('sender', '')
         message = data.get('message', '')
+        uploaded_images = data.get('uploadedImages', [])
+        
+        # Debug: Print what we received
+        print(f"[DEBUG] Received uploaded_images: {len(uploaded_images)} images")
+        if uploaded_images:
+            print(f"[DEBUG] First image keys: {list(uploaded_images[0].keys()) if uploaded_images else 'None'}")
         
         # Create a detailed prompt for OpenAI
         prompt = f"""Create a personalized greeting card message for {recipient} for a {occasion} occasion. 
@@ -561,11 +797,18 @@ End your message with the last sentence of your greeting. The system will add th
         
         generated_text = response.choices[0].message.content.strip()
         
+        # Analyze uploaded images if any
+        image_analyses = []
+        if uploaded_images:
+            print(f"[INFO] Analyzing {len(uploaded_images)} uploaded images...")
+            image_analyses = analyze_uploaded_images(uploaded_images)
+            print(f"[INFO] Image analysis complete: {len(image_analyses)} images analyzed")
+        
         # Generate image suggestion based on occasion and style
         image_suggestion = get_image_suggestion(occasion, style)
         
-        # Generate DALL-E image
-        generated_image_url = generate_dalle_image(occasion, style, recipient, generated_text, message)
+        # Generate DALL-E image with enhanced context from uploaded images
+        generated_image_url = generate_dalle_image(occasion, style, recipient, generated_text, message, image_analyses)
         
         track_request(occasion, style, True)
         
@@ -573,7 +816,8 @@ End your message with the last sentence of your greeting. The system will add th
             'success': True,
             'generated_text': generated_text,
             'image_suggestion': image_suggestion,
-            'generated_image_url': generated_image_url
+            'generated_image_url': generated_image_url,
+            'image_analyses': image_analyses
         })
     
     except Exception as e:

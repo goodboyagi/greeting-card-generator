@@ -117,6 +117,28 @@
             .progress-percentage {
                 font-size: 1rem;
             }
+            
+            /* Image upload mobile styles */
+            .upload-zone {
+                padding: 1.5rem;
+            }
+            
+            .upload-icon {
+                font-size: 2.5rem;
+            }
+            
+            .upload-text {
+                font-size: 1rem;
+            }
+            
+            .image-grid {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                gap: 0.8rem;
+            }
+            
+            .image-item img {
+                height: 120px;
+            }
         }
 
         @media (max-width: 480px) {
@@ -180,6 +202,28 @@
             
             .progress-percentage {
                 font-size: 0.9rem;
+            }
+            
+            /* Image upload mobile styles */
+            .upload-zone {
+                padding: 1rem;
+            }
+            
+            .upload-icon {
+                font-size: 2rem;
+            }
+            
+            .upload-text {
+                font-size: 0.9rem;
+            }
+            
+            .image-grid {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+                gap: 0.6rem;
+            }
+            
+            .image-item img {
+                height: 100px;
             }
         }
 
@@ -321,6 +365,215 @@
             justify-content: center;
             gap: 10px;
             margin-top: 0.5rem;
+        }
+
+        /* Image Upload Styles */
+        .image-upload-container {
+            margin-top: 1rem;
+        }
+
+        .upload-zone {
+            border: 2px dashed #667eea;
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .upload-zone:hover {
+            border-color: #764ba2;
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .upload-zone.dragover {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+            transform: scale(1.02);
+        }
+
+        .upload-content {
+            pointer-events: none;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #667eea;
+        }
+
+        .upload-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-subtext {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-formats {
+            font-size: 0.8rem;
+            color: #999;
+            margin-top: 1rem;
+        }
+
+        .image-preview-area {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 15px;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .image-preview-area h4 {
+            color: #667eea;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .image-item {
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .image-item:hover {
+            transform: translateY(-5px);
+        }
+
+        .image-item img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .image-caption {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 0.5rem;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        .image-remove {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(231, 76, 60, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s ease;
+        }
+
+        .image-remove:hover {
+            background: rgba(231, 76, 60, 1);
+        }
+
+        .image-caption-input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+            background: white;
+        }
+
+        .privacy-notice {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .privacy-notice p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: #2e7d32;
+            line-height: 1.4;
+        }
+
+        /* Image Analysis Results Styles */
+        #imageAnalysisResults {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: rgba(102, 126, 234, 0.05);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 15px;
+        }
+
+        #imageAnalysisResults h4 {
+            color: #667eea;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .image-analysis-item {
+            background: white;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 10px;
+            border: 1px solid rgba(102, 126, 234, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .image-analysis-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.8rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .image-analysis-content {
+            font-size: 0.9rem;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .analysis-section {
+            margin-bottom: 0.5rem;
+        }
+
+        .analysis-section strong {
+            color: #667eea;
+        }
+
+        .no-analysis {
+            text-align: center;
+            color: #999;
+            font-style: italic;
         }
 
         .result {
@@ -531,6 +784,33 @@
                 <textarea id="message" name="message" placeholder="Add any specific details or personal touches you'd like to include..."></textarea>
             </div>
 
+            <!-- Image Upload Section -->
+            <div class="form-group">
+                <label>📸 Context Images (Optional):</label>
+                <div class="image-upload-container">
+                    <div class="upload-zone" id="uploadZone">
+                        <div class="upload-content">
+                            <div class="upload-icon">📁</div>
+                            <p class="upload-text">Drag & drop up to 3 images here</p>
+                            <p class="upload-subtext">or click to browse</p>
+                            <p class="upload-formats">Supports: JPG, JPEG, PNG (max 5MB each)</p>
+                        </div>
+                        <input type="file" id="imageInput" multiple accept=".jpg,.jpeg,.png" style="display: none;">
+                    </div>
+                    
+                    <!-- Image Preview Area -->
+                    <div class="image-preview-area" id="imagePreviewArea" style="display: none;">
+                        <h4>📷 Your Images:</h4>
+                        <div class="image-grid" id="imageGrid"></div>
+                    </div>
+                    
+                    <!-- Privacy Notice -->
+                    <div class="privacy-notice">
+                        <p>🔒 <strong>Privacy:</strong> Your images are processed temporarily and never stored permanently. They're only used to enhance your greeting card generation.</p>
+                    </div>
+                </div>
+            </div>
+
             <button type="submit" class="generate-btn" id="generateBtn">
                 Generate Greeting Card
             </button>
@@ -612,6 +892,15 @@
         const recipientInput = document.getElementById('recipient');
         const recipientPlaceholder = document.getElementById('recipientPlaceholder');
 
+        // Image upload elements
+        const uploadZone = document.getElementById('uploadZone');
+        const imageInput = document.getElementById('imageInput');
+        const imagePreviewArea = document.getElementById('imagePreviewArea');
+        const imageGrid = document.getElementById('imageGrid');
+
+        // Store uploaded images
+        let uploadedImages = [];
+
         // Function to get contextually appropriate signature based on occasion and style
         function getSignature(occasion, style) {
             const romanticOccasions = ['anniversary', 'wedding', 'valentine'];
@@ -652,6 +941,133 @@
             }
         });
 
+        // Image Upload Functionality
+        uploadZone.addEventListener('click', () => imageInput.click());
+        
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+        
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+        
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files);
+            handleImageFiles(files);
+        });
+        
+        imageInput.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            handleImageFiles(files);
+        });
+
+        function handleImageFiles(files) {
+            const imageFiles = files.filter(file => 
+                file.type.startsWith('image/') && 
+                ['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)
+            );
+            
+            if (imageFiles.length === 0) {
+                alert('Please select valid image files (JPG, JPEG, or PNG)');
+                return;
+            }
+            
+            // Check file size (5MB limit)
+            const oversizedFiles = imageFiles.filter(file => file.size > 5 * 1024 * 1024);
+            if (oversizedFiles.length > 0) {
+                alert('Some images are too large. Please keep images under 5MB each.');
+                return;
+            }
+            
+            // Limit to 3 images
+            if (uploadedImages.length + imageFiles.length > 3) {
+                alert('You can only upload up to 3 images. Please remove some existing images first.');
+                return;
+            }
+            
+            imageFiles.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const imageData = {
+                        id: Date.now() + Math.random(),
+                        file: file,
+                        dataUrl: e.target.result,
+                        caption: ''
+                    };
+                    uploadedImages.push(imageData);
+                    updateImagePreview();
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function updateImagePreview() {
+            if (uploadedImages.length === 0) {
+                imagePreviewArea.style.display = 'none';
+                uploadZone.style.borderColor = '#667eea';
+                uploadZone.style.background = 'rgba(102, 126, 234, 0.05)';
+                return;
+            }
+            
+            imagePreviewArea.style.display = 'block';
+            imageGrid.innerHTML = '';
+            
+            // Update upload zone appearance when images are present
+            uploadZone.style.borderColor = '#4CAF50';
+            uploadZone.style.background = 'rgba(76, 175, 80, 0.1)';
+            
+            uploadedImages.forEach((image, index) => {
+                const imageItem = document.createElement('div');
+                imageItem.className = 'image-item';
+                imageItem.innerHTML = `
+                    <img src="${image.dataUrl}" alt="Uploaded image ${index + 1}">
+                    <button class="image-remove" onclick="removeImage(${image.id})">×</button>
+                    <div class="image-caption">
+                        <input type="text" 
+                               class="image-caption-input" 
+                               placeholder="Add caption (optional)"
+                               value="${image.caption}"
+                               onchange="updateImageCaption(${image.id}, this.value)">
+                    </div>
+                `;
+                imageGrid.appendChild(imageItem);
+            });
+            
+            // Update upload zone text to show count
+            const uploadText = uploadZone.querySelector('.upload-text');
+            uploadText.textContent = `${uploadedImages.length}/3 images uploaded`;
+            uploadText.style.color = '#4CAF50';
+            uploadText.style.fontWeight = '700';
+        }
+
+        function removeImage(imageId) {
+            uploadedImages = uploadedImages.filter(img => img.id !== imageId);
+            updateImagePreview();
+            
+            // Reset upload zone text if no images left
+            if (uploadedImages.length === 0) {
+                const uploadText = uploadZone.querySelector('.upload-text');
+                uploadText.textContent = 'Drag & drop up to 3 images here';
+                uploadText.style.color = '#333';
+                uploadText.style.fontWeight = '600';
+            }
+        }
+
+        function updateImageCaption(imageId, caption) {
+            const image = uploadedImages.find(img => img.id === imageId);
+            if (image) {
+                image.caption = caption;
+            }
+        }
+
+        // Make functions global for onclick handlers
+        window.removeImage = removeImage;
+        window.updateImageCaption = updateImageCaption;
+
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -685,7 +1101,13 @@
             
             // Update status messages during generation
             let statusIndex = 0;
-            const statusMessages = [
+            const statusMessages = uploadedImages.length > 0 ? [
+                'Analyzing uploaded images...',
+                'Generating text with GPT-4o-mini...',
+                'Creating personalized message...',
+                'Generating image with DALL-E 3...',
+                'Finalizing your greeting card...'
+            ] : [
                 'Generating text with GPT-4o-mini...',
                 'Creating personalized message...',
                 'Generating image with DALL-E 3...',
@@ -701,7 +1123,7 @@
                 const percentage = Math.round(((statusIndex + 1) / statusMessages.length) * 100);
                 progressPercentage.textContent = `${percentage}%`;
                 statusIndex = (statusIndex + 1) % statusMessages.length;
-            }, 7500); // Change every 7.5 seconds (30s total / 4 messages)
+            }, uploadedImages.length > 0 ? 6000 : 7500); // Adjust timing based on number of messages
 
             const formData = new FormData(form);
             let occasion = formData.get('occasion');
@@ -724,7 +1146,14 @@
                 occasion: occasion,
                 style: formData.get('style'),
                 sender: formData.get('sender'),
-                message: formData.get('message')
+                message: formData.get('message'),
+                uploadedImages: uploadedImages.map(img => ({
+                    caption: img.caption,
+                    fileName: img.file.name,
+                    fileSize: img.file.size,
+                    fileType: img.file.type,
+                    dataUrl: img.dataUrl  // Include the actual image data
+                }))
             };
 
             try {
@@ -754,7 +1183,8 @@
                             occasion: data.occasion,
                             style: data.style,
                             sender: data.sender,
-                            message: data.message
+                            message: data.message,
+                            uploadedImages: data.uploadedImages
                         })
                     });
 
@@ -770,6 +1200,8 @@
                     window.lastImageUrl = apiResult.generated_image_url;
                     window.lastFormData = data;
                     window.lastGeneratedText = apiResult.generated_text;
+                    
+                    // Image analysis results are logged to terminal for debugging
                     
                     // Display the generated text
                     cardContent.innerHTML = `

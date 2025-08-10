@@ -6,6 +6,9 @@ An AI-powered greeting card generator that creates personalized cards using gene
 
 - **🤖 AI Text Generation**: Personalized greeting messages using OpenAI's GPT-4o-mini
 - **🎨 AI Image Generation**: Beautiful, relevant images using DALL-E 3
+- **📸 Personal Image Integration**: Upload your own photos and let AI blend them into generated cards
+- **🧠 Smart Image Analysis**: Vision API analyzes uploaded images to extract meaningful elements
+- **🎯 Context-Aware Prompts**: DALL-E generates images that incorporate your personal photos
 - **📱 Native Sharing**: Share cards via email, WhatsApp, or save to device
 - **🔗 Secure Sharing**: Generate shareable links with 48-hour expiration
 - **💾 Persistent Storage**: Cards stored securely in private GitHub repository
@@ -22,17 +25,20 @@ An AI-powered greeting card generator that creates personalized cards using gene
 ## 🚀 How It Works
 
 1. **Choose Details**: Select recipient, occasion, style, and add a personal message
-2. **AI Generation**: GPT-4o-mini creates personalized text, DALL-E 3 generates relevant images
-3. **Share**: Use native sharing or generate secure shareable links
-4. **Viral Growth**: Recipients can view shared cards and create their own
+2. **Upload Personal Photos** (Optional): Add 1-3 images with captions for personalization
+3. **AI Analysis**: Vision API analyzes your photos to extract meaningful elements
+4. **AI Generation**: GPT-4o-mini creates personalized text, DALL-E 3 generates images incorporating your photos
+5. **Share**: Use native sharing or generate secure shareable links
+6. **Viral Growth**: Recipients can view shared cards and create their own
 
 ## 🏗️ Architecture
 
 - **Frontend**: HTML/CSS/JavaScript (GitHub Pages)
 - **Backend**: Flask API (Render)
-- **AI**: OpenAI GPT-4o-mini + DALL-E 3
+- **AI**: OpenAI GPT-4o-mini + DALL-E 3 + Vision API
 - **Storage**: GitHub API for persistent data
 - **Analytics**: Built-in usage tracking
+- **Image Processing**: Client-side image handling with AI-powered analysis
 
 ## 🔧 Development
 
