@@ -48,14 +48,20 @@ print(f"[INFO] Usage stats file: {USAGE_FILE}")
 # In-memory stats cache for better persistence
 STATS_CACHE = None
 
-# Secure sharing storage (file-based for persistence across server restarts)
-SHARED_CARDS_FILE = 'shared_cards.json'
+# Shared cards storage
 SHARED_CARDS_CACHE = {}  # Cache for performance
 
-# GitHub storage configuration (only for stats, not shared cards)
-GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
-GITHUB_REPO = 'goodboyagi/greeting-card-generator'
-GITHUB_STATS_FILE = 'production_stats.json'
+# GitHub configuration for stats and shared cards storage
+GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
+GITHUB_REPO = os.environ.get('GITHUB_REPO', 'goodboyagi/greeting-card-generator')
+GITHUB_STATS_FILE = os.environ.get('GITHUB_STATS_FILE', 'production_stats.json')
+
+# GitHub configuration for shared cards storage
+GITHUB_STORAGE_REPO = os.environ.get('GITHUB_STORAGE_REPO', 'goodboyagi/greeting-card-storage')
+GITHUB_SHARED_CARDS_FILE = os.environ.get('GITHUB_SHARED_CARDS_FILE', 'shared_cards.json')
+
+# Check if running in development mode
+DEV_MODE = os.environ.get('PORT', '5001') == '5001'
 
 def extract_scene_keywords(recipient, occasion, message, generated_text):
     """
@@ -598,29 +604,37 @@ def get_stats():
 
 @app.route('/api/debug/shared-cards', methods=['GET'])
 def debug_shared_cards():
-    """Debug endpoint to check shared cards status (development only)"""
+    """Debug endpoint for shared cards (local development only)"""
+    if not DEV_MODE:
+        return jsonify({'error': 'Debug endpoint only available in development'}), 403
+    
     try:
-        # Only allow in development
-        if os.environ.get('PORT', '5001') != '5001':
-            return jsonify({'error': 'Debug endpoint only available in development'}), 403
+        # Load from GitHub storage
+        all_cards = load_shared_cards_from_github()
+        if all_cards is None:
+            all_cards = []
         
-        with open(SHARED_CARDS_FILE, 'r') as f:
-            all_cards = json.load(f)
+        # Count expired cards
+        current_time = datetime.now()
+        expired_cards = []
+        active_cards = []
         
-        # Count active and expired cards
-        current_time = time.time()
-        active_cards = {k: v for k, v in all_cards.items() if current_time < v['expires_at']}
-        expired_cards = {k: v for k, v in all_cards.items() if current_time >= v['expires_at']}
+        for card in all_cards:
+            if 'expires_at' in card:
+                expires_at = datetime.fromisoformat(card['expires_at'])
+                if current_time > expires_at:
+                    expired_cards.append(card)
+                else:
+                    active_cards.append(card)
         
         return jsonify({
             'total_cards': len(all_cards),
             'active_cards': len(active_cards),
             'expired_cards': len(expired_cards),
             'cache_size': len(SHARED_CARDS_CACHE),
-            'file_path': os.path.abspath(SHARED_CARDS_FILE)
+            'storage_type': 'GitHub',
+            'storage_repo': GITHUB_STORAGE_REPO
         })
-    except FileNotFoundError:
-        return jsonify({'error': 'Shared cards file not found'}), 404
     except Exception as e:
         return jsonify({'error': f'Failed to read shared cards: {e}'}), 500
 
@@ -858,43 +872,119 @@ def save_stats_to_github(stats):
         return False
     
     try:
-        # First, get the current file to get the SHA
+        # Get current file info
         url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_STATS_FILE}"
         headers = {
             'Authorization': f'token {GITHUB_TOKEN}',
             'Accept': 'application/vnd.github.v3+json'
         }
         
-        # Get current file SHA
+        # Get current file to get SHA
         response = requests.get(url, headers=headers)
-        sha = None
+        current_sha = None
         if response.status_code == 200:
-            sha = response.json()['sha']
+            current_sha = response.json()['sha']
         
-        # Prepare the update
-        stats_json = json.dumps(stats, indent=2)
-        content = base64.b64encode(stats_json.encode('utf-8')).decode('utf-8')
+        # Prepare new content
+        content = json.dumps(stats, indent=2)
+        encoded_content = base64.b64encode(content.encode()).decode()
         
-        data = {
-            'message': f'Update usage stats - {stats.get("total_requests", 0)} total requests',
-            'content': content
+        # Prepare commit data
+        commit_data = {
+            'message': f'Update usage stats - {stats["total_requests"]} total requests',
+            'content': encoded_content
         }
         
-        if sha:
-            data['sha'] = sha
+        if current_sha:
+            commit_data['sha'] = current_sha
         
-        # Update the file
-        response = requests.put(url, headers=headers, json=data)
+        # Commit the changes
+        response = requests.put(url, headers=headers, json=commit_data)
         
         if response.status_code in [200, 201]:
-            print(f"[INFO] Saved stats to GitHub: {stats.get('total_requests', 0)} total requests")
+            print(f"[INFO] Successfully saved stats to GitHub: {stats['total_requests']} total requests")
             return True
         else:
-            print(f"[ERROR] Failed to save to GitHub: {response.status_code}")
+            print(f"[ERROR] Failed to save stats to GitHub: {response.status_code}")
             return False
             
     except Exception as e:
-        print(f"[ERROR] Failed to save to GitHub: {e}")
+        print(f"[ERROR] Failed to save stats to GitHub: {e}")
+        return False
+
+def load_shared_cards_from_github():
+    """Load shared cards from GitHub storage"""
+    if not GITHUB_TOKEN:
+        return None
+    
+    try:
+        url = f"https://api.github.com/repos/{GITHUB_STORAGE_REPO}/contents/{GITHUB_SHARED_CARDS_FILE}"
+        headers = {
+            'Authorization': f'token {GITHUB_TOKEN}',
+            'Accept': 'application/vnd.github.v3+json'
+        }
+        
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            content = response.json()
+            cards_data = base64.b64decode(content['content']).decode('utf-8')
+            return json.loads(cards_data)
+        elif response.status_code == 404:
+            # File doesn't exist, return empty array
+            print(f"[INFO] Shared cards file not found in GitHub, starting with empty storage")
+            return []
+        else:
+            print(f"[ERROR] GitHub API error loading shared cards: {response.status_code}")
+            return None
+            
+    except Exception as e:
+        print(f"[ERROR] Failed to load shared cards from GitHub: {e}")
+        return None
+
+def save_shared_cards_to_github(cards_data):
+    """Save shared cards to GitHub storage"""
+    if not GITHUB_TOKEN:
+        return False
+    
+    try:
+        # Get current file info
+        url = f"https://api.github.com/repos/{GITHUB_STORAGE_REPO}/contents/{GITHUB_SHARED_CARDS_FILE}"
+        headers = {
+            'Authorization': f'token {GITHUB_TOKEN}',
+            'Accept': 'application/vnd.github.v3+json'
+        }
+        
+        # Get current file to get SHA
+        response = requests.get(url, headers=headers)
+        current_sha = None
+        if response.status_code == 200:
+            current_sha = response.json()['sha']
+        
+        # Prepare new content
+        content = json.dumps(cards_data, indent=2)
+        encoded_content = base64.b64encode(content.encode()).decode()
+        
+        # Prepare commit data
+        commit_data = {
+            'message': f'Update shared cards storage - {len(cards_data)} cards',
+            'content': encoded_content
+        }
+        
+        if current_sha:
+            commit_data['sha'] = current_sha
+        
+        # Commit the changes
+        response = requests.put(url, headers=headers, json=commit_data)
+        
+        if response.status_code in [200, 201]:
+            print(f"[INFO] Successfully saved {len(cards_data)} shared cards to GitHub")
+            return True
+        else:
+            print(f"[ERROR] Failed to save shared cards to GitHub: {response.status_code}")
+            return False
+            
+    except Exception as e:
+        print(f"[ERROR] Failed to save shared cards to GitHub: {e}")
         return False
 
 # Secure sharing functions
@@ -903,125 +993,160 @@ def generate_secure_card_id():
     return secrets.token_urlsafe(16)
 
 def store_shared_card(card_data):
-    """Store a card temporarily with 48-hour expiration"""
-    card_id = generate_secure_card_id()
-    expires_at = time.time() + (48 * 60 * 60)  # 48 hours from now
+    """Store a shared card in GitHub storage"""
+    if not GITHUB_TOKEN:
+        print("[ERROR] No GitHub token available for shared card storage")
+        return None
     
-    # Store in file
     try:
-        if not os.path.exists(SHARED_CARDS_FILE):
-            with open(SHARED_CARDS_FILE, 'w') as f:
-                json.dump({}, f, indent=2)
+        # Generate a secure card ID
+        card_id = generate_secure_card_id()
         
-        with open(SHARED_CARDS_FILE, 'r') as f:
-            all_cards = json.load(f)
+        # Add the card ID and expiration to the data
+        card_data['id'] = card_id
+        card_data['expires_at'] = (datetime.now() + timedelta(hours=48)).isoformat()
         
-        all_cards[card_id] = {
-            'data': card_data,
-            'expires_at': expires_at,
-            'created_at': time.time()
-        }
+        # Load existing cards from GitHub
+        existing_cards = load_shared_cards_from_github()
+        if existing_cards is None:
+            existing_cards = []
         
-        with open(SHARED_CARDS_FILE, 'w') as f:
-            json.dump(all_cards, f, indent=2)
+        # Add the new card
+        existing_cards.append(card_data)
         
-        print(f"[INFO] Stored shared card {card_id} in file, expires at {datetime.fromtimestamp(expires_at)}")
-        # Also cache it locally
-        SHARED_CARDS_CACHE[card_id] = all_cards[card_id]
-        return card_id
+        # Save back to GitHub
+        success = save_shared_cards_to_github(existing_cards)
+        if success:
+            # Update local cache
+            SHARED_CARDS_CACHE[card_id] = card_data
+            print(f"[INFO] Stored shared card {card_id} in GitHub storage")
+            return card_id
+        else:
+            print(f"[ERROR] Failed to save shared card {card_id} to GitHub")
+            return None
+            
     except Exception as e:
-        print(f"[ERROR] Failed to store shared card {card_id} in file: {e}")
+        print(f"[ERROR] Failed to store shared card: {e}")
         return None
 
 def get_shared_card(card_id):
-    """Retrieve a shared card if it exists and hasn't expired"""
-    # Check cache first
-    if card_id in SHARED_CARDS_CACHE:
-        card_info = SHARED_CARDS_CACHE[card_id]
-        if time.time() < card_info['expires_at']:
-            return card_info['data']
-        else:
-            del SHARED_CARDS_CACHE[card_id]
-            print(f"[INFO] Expired shared card {card_id} removed from cache")
-            return None
-
-    # If not in cache, load from file
-    try:
-        with open(SHARED_CARDS_FILE, 'r') as f:
-            all_cards = json.load(f)
-            
-            # Find the card by ID
-            if card_id in all_cards:
-                card_info = all_cards[card_id]
-                # Check if expired
-                if time.time() < card_info['expires_at']:
-                    SHARED_CARDS_CACHE[card_id] = card_info # Cache it
-                    return card_info['data']
-                else:
-                    # Remove expired card from file
-                    del all_cards[card_id]
-                    # Save updated file
-                    with open(SHARED_CARDS_FILE, 'w') as f_write:
-                        json.dump(all_cards, f_write, indent=2)
-                    print(f"[INFO] Removed expired shared card {card_id} from file")
-                    return None
-            return None # Card not found
-    except FileNotFoundError:
-        print(f"[INFO] Shared cards file not found in file system.")
+    """Get a shared card from GitHub storage"""
+    if not GITHUB_TOKEN:
+        print("[ERROR] No GitHub token available for shared card retrieval")
         return None
+    
+    try:
+        # Check local cache first
+        if card_id in SHARED_CARDS_CACHE:
+            cached_card = SHARED_CARDS_CACHE[card_id]
+            # Check if expired
+            if 'expires_at' in cached_card:
+                expires_at = datetime.fromisoformat(cached_card['expires_at'])
+                if datetime.now() > expires_at:
+                    # Remove from cache if expired
+                    del SHARED_CARDS_CACHE[card_id]
+                    return None
+            return cached_card
+        
+        # Load from GitHub if not in cache
+        all_cards = load_shared_cards_from_github()
+        if all_cards is None:
+            return None
+        
+        # Find the card by ID
+        for card in all_cards:
+            if card.get('id') == card_id:
+                # Check if expired
+                if 'expires_at' in card:
+                    expires_at = datetime.fromisoformat(card['expires_at'])
+                    if datetime.now() > expires_at:
+                        return None
+                
+                # Cache it for future requests
+                SHARED_CARDS_CACHE[card_id] = card
+                return card
+        
+        return None
+        
     except Exception as e:
-        print(f"[ERROR] Failed to load shared card {card_id} from file: {e}")
+        print(f"[ERROR] Failed to get shared card {card_id}: {e}")
         return None
 
 def cleanup_expired_cards():
-    """Remove expired cards from storage"""
+    """Remove expired shared cards from GitHub storage"""
+    if not GITHUB_TOKEN:
+        print("[ERROR] No GitHub token available for cleanup")
+        return
+    
     try:
-        with open(SHARED_CARDS_FILE, 'r') as f:
-            all_cards = json.load(f)
-            
-            # Find expired cards
-            expired_ids = [
-                c_id for c_id, card_info in all_cards.items()
-                if time.time() > card_info['expires_at']
-            ]
-            
-            for card_id in expired_ids:
-                del all_cards[card_id]
-                # Also remove from cache
-                if card_id in SHARED_CARDS_CACHE:
-                    del SHARED_CARDS_CACHE[card_id]
-            
-            if expired_ids:
-                print(f"[INFO] Cleaned up {len(expired_ids)} expired shared cards from file")
-                
-                # Save updated file
-                with open(SHARED_CARDS_FILE, 'w') as f_write:
-                    json.dump(all_cards, f_write, indent=2)
+        # Load all cards from GitHub
+        all_cards = load_shared_cards_from_github()
+        if all_cards is None:
+            return
+        
+        # Filter out expired cards
+        current_time = datetime.now()
+        active_cards = []
+        expired_count = 0
+        
+        for card in all_cards:
+            if 'expires_at' in card:
+                expires_at = datetime.fromisoformat(card['expires_at'])
+                if current_time <= expires_at:
+                    active_cards.append(card)
+                else:
+                    expired_count += 1
+                    # Remove from cache if present
+                    card_id = card.get('id')
+                    if card_id and card_id in SHARED_CARDS_CACHE:
+                        del SHARED_CARDS_CACHE[card_id]
+        
+        # Save updated list back to GitHub
+        if expired_count > 0:
+            success = save_shared_cards_to_github(active_cards)
+            if success:
+                print(f"[INFO] Cleaned up {expired_count} expired shared cards from GitHub storage")
+                # Update local cache
+                SHARED_CARDS_CACHE.clear()
+                for card in active_cards:
+                    card_id = card.get('id')
+                    if card_id:
+                        SHARED_CARDS_CACHE[card_id] = card
             else:
-                print(f"[INFO] No expired shared cards to clean up in file.")
-    except FileNotFoundError:
-        print(f"[INFO] Shared cards file not found in file system for cleanup.")
+                print(f"[ERROR] Failed to save cleaned shared cards to GitHub")
+        
     except Exception as e:
-        print(f"[ERROR] Failed to cleanup expired shared cards from file: {e}")
+        print(f"[ERROR] Failed to cleanup expired shared cards: {e}")
 
 def load_shared_cards_cache():
-    """Load shared cards from file into cache on startup"""
+    """Load non-expired shared cards from GitHub into local cache"""
+    if not GITHUB_TOKEN:
+        print("[WARNING] No GitHub token available, shared cards cache will be empty")
+        return
+    
     try:
-        if os.path.exists(SHARED_CARDS_FILE):
-            with open(SHARED_CARDS_FILE, 'r') as f:
-                all_cards = json.load(f)
-                
-            # Load non-expired cards into cache
-            current_time = time.time()
-            for card_id, card_info in all_cards.items():
-                if current_time < card_info['expires_at']:
-                    SHARED_CARDS_CACHE[card_id] = card_info
-            
-            print(f"[INFO] Loaded {len(SHARED_CARDS_CACHE)} shared cards into cache from file")
-        else:
-            print(f"[INFO] No shared cards file found, starting with empty cache")
+        all_cards = load_shared_cards_from_github()
+        if all_cards is None:
+            print("[INFO] No shared cards found in GitHub storage")
+            return
+        
+        # Filter out expired cards and load into cache
+        current_time = datetime.now()
+        active_count = 0
+        
+        for card in all_cards:
+            if 'expires_at' in card:
+                expires_at = datetime.fromisoformat(card['expires_at'])
+                if current_time <= expires_at:
+                    card_id = card.get('id')
+                    if card_id:
+                        SHARED_CARDS_CACHE[card_id] = card
+                        active_count += 1
+        
+        print(f"[INFO] Loaded {active_count} active shared cards from GitHub into cache")
+        
     except Exception as e:
-        print(f"[ERROR] Failed to load shared cards cache from file: {e}")
+        print(f"[ERROR] Failed to load shared cards cache from GitHub: {e}")
 
 if __name__ == '__main__':
     # Check if API keys are configured
@@ -1029,8 +1154,11 @@ if __name__ == '__main__':
         print("⚠️  Warning: OPENAI_API_KEY not found in environment variables")
         print("   Create a .env file with your API keys for full functionality")
     
-    # Load shared cards cache from file
+    # Load shared cards cache from GitHub storage
     load_shared_cards_cache()
+    
+    # Note: Expired cards are cleaned up automatically when accessed
+    # No need for scheduled cleanup since we're using GitHub storage
     
     # Get port from environment variable (for production) or use 5001 for local development
     port = int(os.environ.get('PORT', 5001))
