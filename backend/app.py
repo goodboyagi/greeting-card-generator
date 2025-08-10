@@ -1,13 +1,15 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template_string
 from flask_cors import CORS
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import requests
 import base64
 import re
+import secrets
+import time
 
 # Load environment variables
 load_dotenv()
@@ -45,6 +47,9 @@ print(f"[INFO] Usage stats file: {USAGE_FILE}")
 
 # In-memory stats cache for better persistence
 STATS_CACHE = None
+
+# Secure sharing storage (in-memory for now, could be Redis/database later)
+SHARED_CARDS = {}  # {card_id: {data, expires_at, created_at}}
 
 # GitHub storage configuration
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
@@ -586,6 +591,205 @@ def get_stats():
     stats = load_usage_stats()
     return jsonify(stats)
 
+@app.route('/api/share', methods=['POST'])
+def share_card():
+    """Create a secure shareable link for a greeting card"""
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['recipient', 'occasion', 'generated_text', 'image_url']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+        
+        # Store the card data
+        card_data = {
+            'recipient': data['recipient'],
+            'occasion': data['occasion'],
+            'generated_text': data['generated_text'],
+            'image_url': data['image_url'],
+            'style': data.get('style', 'friendly'),
+            'sender': data.get('sender', 'A Friend'),
+            'message': data.get('message', ''),
+            'created_at': datetime.now().isoformat()
+        }
+        
+        card_id = store_shared_card(card_data)
+        
+        # Generate the shareable URL based on environment
+        # Check if we're running locally (port 5001) vs production
+        current_port = os.environ.get('PORT', '5001')
+        if current_port == '5001' or current_port == 5001:
+            # Local development
+            share_url = f"http://localhost:5001/share/{card_id}"
+        else:
+            # Production
+            share_url = f"https://goodboyagi.com/greeting-card-generator/share/{card_id}"
+        
+        return jsonify({
+            'success': True,
+            'share_id': card_id,
+            'share_url': share_url,
+            'expires_in_hours': 48
+        })
+        
+    except Exception as e:
+        print(f"[ERROR] Share card error: {e}")
+        return jsonify({'error': 'Failed to create shareable link'}), 500
+
+@app.route('/share/<card_id>')
+def view_shared_card(card_id):
+    """View a shared greeting card"""
+    # Clean up expired cards first
+    cleanup_expired_cards()
+    
+    # Get the card data
+    card_data = get_shared_card(card_id)
+    
+    if not card_data:
+        # Card doesn't exist or has expired
+        return render_template_string('''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Greeting Card Not Found</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+                body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+                .container { max-width: 600px; margin: 0 auto; }
+                .btn { display: inline-block; padding: 15px 30px; background: white; color: #667eea; text-decoration: none; border-radius: 25px; font-weight: bold; margin: 20px 10px; }
+                .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>🎭 Greeting Card Not Found</h1>
+                <p>This greeting card has either expired or doesn't exist.</p>
+                <p>Greeting cards expire after 48 hours for security.</p>
+                <a href="https://goodboyagi.com/greeting-card-generator/" class="btn">✨ Create Your Own Greeting Card</a>
+            </div>
+        </body>
+        </html>
+        ''')
+    
+    # Render the shared card
+    html_template = '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Greeting Card for {{ card.recipient }}</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta property="og:title" content="Greeting Card for {{ card.recipient }}">
+        <meta property="og:description" content="A personalized greeting card for {{ card.occasion }}">
+        <meta property="og:image" content="{{ card.image_url }}">
+        <meta property="og:url" content="{{ request.url }}">
+        <meta property="og:type" content="website">
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="Greeting Card for {{ card.recipient }}">
+        <meta name="twitter:description" content="A personalized greeting card for {{ card.occasion }}">
+        <meta name="twitter:image" content="{{ card.image_url }}">
+        <style>
+            body { 
+                font-family: Arial, sans-serif; 
+                margin: 0; 
+                padding: 20px; 
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                color: white;
+                min-height: 100vh;
+            }
+            .container { 
+                max-width: 600px; 
+                margin: 0 auto; 
+                background: rgba(255,255,255,0.1); 
+                border-radius: 20px; 
+                padding: 30px; 
+                backdrop-filter: blur(10px);
+            }
+            .card-image { 
+                width: 100%; 
+                max-width: 512px; 
+                height: auto; 
+                border-radius: 15px; 
+                margin: 20px 0; 
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            }
+            .card-text { 
+                background: rgba(255,255,255,0.9); 
+                color: #333; 
+                padding: 25px; 
+                border-radius: 15px; 
+                margin: 20px 0; 
+                font-size: 18px; 
+                line-height: 1.6;
+                text-align: justify;
+            }
+
+            .btn { 
+                display: inline-block; 
+                padding: 15px 30px; 
+                background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); 
+                color: white; 
+                text-decoration: none; 
+                border-radius: 25px; 
+                font-weight: bold; 
+                margin: 20px 10px; 
+                transition: all 0.3s ease;
+            }
+            .btn:hover { 
+                transform: translateY(-2px); 
+                box-shadow: 0 5px 15px rgba(0,0,0,0.3); 
+            }
+            .viral-section { 
+                text-align: center; 
+                margin: 30px 0; 
+                padding: 20px; 
+                background: rgba(255,255,255,0.1); 
+                border-radius: 15px;
+            }
+            .branding { 
+                text-align: center; 
+                margin: 20px 0; 
+                font-size: 14px; 
+                opacity: 0.8;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🎭 Greeting Card for {{ card.recipient }}</h1>
+            
+            <div style="text-align: left; margin: 20px 0; font-size: 18px; opacity: 0.9;">
+                <p><strong>From:</strong> {{ card.sender }}</p>
+            </div>
+            
+            <img src="{{ card.image_url }}" alt="Greeting card for {{ card.recipient }}" class="card-image">
+            
+            <div class="card-text">
+                {{ card.generated_text }}
+            </div>
+            
+            <div class="card-text" style="margin-top: 15px; text-align: left; font-style: italic;">
+                <p style="margin: 0;">With warmest regards,<br>{{ card.sender }}</p>
+            </div>
+            
+            <div class="viral-section">
+                <h3>✨ Love this greeting card?</h3>
+                <p>Create your own personalized greeting card for your loved ones!</p>
+                <a href="https://goodboyagi.com/greeting-card-generator/" class="btn">🎨 Create Your Own Greeting Card</a>
+            </div>
+            
+            <div class="branding">
+                <p>🎭 Made with Good Boy AGI</p>
+                <p>Share the joy of personalized greeting cards!</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
+    
+    return render_template_string(html_template, card=card_data, request=request)
+
 def load_stats_from_github():
     """Load stats from GitHub file"""
     if not GITHUB_TOKEN:
@@ -658,6 +862,54 @@ def save_stats_to_github(stats):
         print(f"[ERROR] Failed to save to GitHub: {e}")
         return False
 
+# Secure sharing functions
+def generate_secure_card_id():
+    """Generate a secure, unguessable card ID"""
+    return secrets.token_urlsafe(16)
+
+def store_shared_card(card_data):
+    """Store a card temporarily with 48-hour expiration"""
+    card_id = generate_secure_card_id()
+    expires_at = time.time() + (48 * 60 * 60)  # 48 hours from now
+    
+    SHARED_CARDS[card_id] = {
+        'data': card_data,
+        'expires_at': expires_at,
+        'created_at': time.time()
+    }
+    
+    print(f"[INFO] Stored shared card {card_id}, expires at {datetime.fromtimestamp(expires_at)}")
+    return card_id
+
+def get_shared_card(card_id):
+    """Retrieve a shared card if it exists and hasn't expired"""
+    if card_id not in SHARED_CARDS:
+        return None
+    
+    card_info = SHARED_CARDS[card_id]
+    
+    # Check if expired
+    if time.time() > card_info['expires_at']:
+        del SHARED_CARDS[card_id]
+        print(f"[INFO] Expired shared card {card_id} removed")
+        return None
+    
+    return card_info['data']
+
+def cleanup_expired_cards():
+    """Remove expired cards from storage"""
+    current_time = time.time()
+    expired_ids = [
+        card_id for card_id, card_info in SHARED_CARDS.items()
+        if current_time > card_info['expires_at']
+    ]
+    
+    for card_id in expired_ids:
+        del SHARED_CARDS[card_id]
+    
+    if expired_ids:
+        print(f"[INFO] Cleaned up {len(expired_ids)} expired shared cards")
+
 if __name__ == '__main__':
     # Check if API keys are configured
     if not OPENAI_API_KEY:
@@ -668,4 +920,4 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
     
     # Use debug=False for production
-    app.run(debug=False, host='0.0.0.0', port=port) 
+    app.run(debug=True, host='0.0.0.0', port=port) 

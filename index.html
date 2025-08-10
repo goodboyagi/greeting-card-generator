@@ -319,6 +319,28 @@
             border: 1px solid rgba(102, 126, 234, 0.1);
         }
         
+        .share-link-display {
+            background: rgba(255,255,255,0.95);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .link-container input {
+            font-family: monospace;
+            cursor: text;
+        }
+        
+        .copy-btn:hover {
+            background: #5a6fd8 !important;
+            transform: translateY(-1px);
+        }
+        
+        .share-actions .share-btn {
+            margin: 0;
+            min-width: 120px;
+        }
+        
         /* Card content styling - moved from inline styles */
         .card-content-inner {
             background: white;
@@ -536,6 +558,11 @@
                 }
                 
                 if (apiResult.success) {
+                    // Store data globally for sharing functions
+                    window.lastImageUrl = apiResult.generated_image_url;
+                    window.lastFormData = data;
+                    window.lastGeneratedText = apiResult.generated_text;
+                    
                     // Display the generated text
                     cardContent.innerHTML = `
                         <div class="card-content-inner">
@@ -556,9 +583,9 @@
                                 <img src="${apiResult.generated_image_url}" alt="Generated greeting card image" onerror="this.parentElement.innerHTML='<div class=\'image-error\'>Failed to load generated image. The text generation was successful!</div>'">
                                 <div class="share-section">
                                     <button id="shareBtn" class="share-btn">
-                                        📤 Share Greeting Card
+                                        🔗 Generate Share Link
                                     </button>
-                                    <p style="margin-top: 0.5rem; font-size: 0.9rem; color: #666;">Share via email, WhatsApp, or save to your device</p>
+                                    <p style="margin-top: 0.5rem; font-size: 0.9rem; color: #666;">Create a secure link to share your greeting card</p>
                                 </div>
                             </div>
                         `;
@@ -614,17 +641,17 @@
             return canvas.toDataURL('image/png');
         }
 
-        // Function to share the greeting card using Web Share API
+        // Function to generate a secure shareable link for the greeting card
         async function shareGreetingCard(imageUrl, formData, generatedText) {
             // Show loading state on share button
             const shareBtn = document.getElementById('shareBtn');
             const originalText = shareBtn.textContent;
-            shareBtn.textContent = 'Preparing...';
+            shareBtn.textContent = 'Generating...';
             shareBtn.disabled = true;
             
             // Add a safety timeout to restore button if something goes wrong
             const safetyTimeout = setTimeout(() => {
-                if (shareBtn.textContent === 'Preparing...') {
+                if (shareBtn.textContent === 'Generating...') {
                     console.log('Safety timeout: restoring share button');
                     shareBtn.textContent = originalText;
                     shareBtn.disabled = false;
@@ -632,73 +659,40 @@
             }, 10000); // 10 second timeout
             
             try {
+                // Call the secure sharing API
+                const response = await fetch(`${API_BASE}/api/share`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        recipient: formData.recipient,
+                        occasion: formData.occasion,
+                        generated_text: generatedText,
+                        image_url: imageUrl,
+                        style: formData.style,
+                        sender: formData.sender,
+                        message: formData.message || ''
+                    })
+                });
 
-                // Create share data
-                const shareData = {
-                    title: `Greeting Card for ${formData.recipient}`,
-                    text: `Check out this personalized greeting card I created for ${formData.occasion}!`,
-                    url: 'https://goodboyagi.com/greeting-card-generator/'
-                };
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
 
-                               // Try to share the image file if Web Share API supports files
-               if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
-                   try {
-                       let imageBlob;
-                       
-                       if (DEBUG_SHARING) {
-                           // Use dummy image in debug mode (saves DALL-E credits)
-                           console.log('Debug mode: using dummy image for sharing');
-                           const dummyImageDataUrl = createDummyImage(formData.recipient, formData.occasion);
-                           // Convert data URL to blob
-                           const response = await fetch(dummyImageDataUrl);
-                           imageBlob = await response.blob();
-                       } else {
-                           // Use real DALL-E image
-                           const response = await fetch(imageUrl);
-                           imageBlob = await response.blob();
-                       }
-                       
-                       // Create file object for sharing
-                       const imageFile = new File([imageBlob], 'greeting-card.png', { type: 'image/png' });
-                       
-                       // Try to share with file
-                       const shareDataWithFile = {
-                           ...shareData,
-                           files: [imageFile]
-                       };
-                       
-                       if (navigator.canShare(shareDataWithFile)) {
-                           await navigator.share(shareDataWithFile);
-                           showShareSuccess();
-                           return;
-                       }
-                   } catch (fileShareError) {
-                       console.log('File sharing failed (likely CORS issue), falling back to URL sharing');
-                       // Try URL-only sharing as fallback
-                       try {
-                           await navigator.share(shareData);
-                           showShareSuccess();
-                           return;
-                       } catch (urlShareError) {
-                           console.log('URL sharing also failed, using fallback method');
-                           // Check if it was user cancellation vs actual error
-                           if (urlShareError.name === 'AbortError' || urlShareError.name === 'NotAllowedError') {
-                               console.log('User cancelled or denied sharing');
-                               return; // Don't show error, just restore button
-                           }
-                       }
-                   }
-                   
-                   // If we get here, both file and URL sharing failed
-                   fallbackShare(imageUrl, formData, generatedText);
-               } else {
-                   // Fallback for browsers that don't support Web Share API
-                   fallbackShare(imageUrl, formData, generatedText);
-               }
+                const shareResult = await response.json();
+                
+                if (shareResult.success) {
+                    // Show the shareable link
+                    showShareableLink(shareResult.share_url, shareResult.expires_in_hours);
+                } else {
+                    throw new Error(shareResult.error || 'Failed to generate shareable link');
+                }
+                
             } catch (error) {
                 console.error('Share error:', error);
-                // Fallback to download + copy link
-                fallbackShare(imageUrl, formData, generatedText);
+                // Fallback to direct sharing if API fails
+                fallbackDirectShare(imageUrl, formData, generatedText);
             } finally {
                 // Clear the safety timeout
                 clearTimeout(safetyTimeout);
@@ -711,8 +705,92 @@
             }
         }
 
-        // Fallback sharing method for unsupported browsers or CORS issues
-        function fallbackShare(imageUrl, formData, generatedText) {
+        // Function to show the shareable link with copy functionality
+        function showShareableLink(shareUrl, expiresInHours) {
+            const shareBtn = document.getElementById('shareBtn');
+            const shareSection = shareBtn.parentElement;
+            
+            // Replace the button with the shareable link display
+            shareSection.innerHTML = `
+                <div class="share-link-display">
+                    <h4 style="margin: 0 0 10px 0; color: #4CAF50;">✅ Shareable Link Generated!</h4>
+                    <div class="link-container" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                        <input type="text" value="${shareUrl}" readonly style="flex: 1; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; background: #f9f9f9;">
+                        <button onclick="copyShareLink('${shareUrl}')" class="copy-btn" style="padding: 10px 15px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                            📋 Copy
+                        </button>
+                    </div>
+                    <p style="margin: 0 0 15px 0; font-size: 0.9rem; color: #666;">
+                        🔒 This link is secure and expires in ${expiresInHours} hours
+                    </p>
+                    <div class="share-actions" style="display: flex; gap: 10px; justify-content: center;">
+                        <button onclick="shareViaNative('${shareUrl}')" class="share-btn" style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);">
+                            📤 Share Link
+                        </button>
+                        <button onclick="resetShareButton()" class="share-btn" style="background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);">
+                            🔄 New Link
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Function to copy the shareable link to clipboard
+        function copyShareLink(shareUrl) {
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                // Show success feedback
+                const copyBtn = document.querySelector('.copy-btn');
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = '✅ Copied!';
+                copyBtn.style.background = '#4CAF50';
+                
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                    copyBtn.style.background = '#667eea';
+                }, 2000);
+            }).catch(() => {
+                alert('Failed to copy link. Please copy manually: ' + shareUrl);
+            });
+        }
+
+        // Function to share the link via native sharing (if supported)
+        function shareViaNative(shareUrl) {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Greeting Card',
+                    text: 'Check out this personalized greeting card I created!',
+                    url: shareUrl
+                }).catch(() => {
+                    // Fallback to manual copy
+                    copyShareLink(shareUrl);
+                });
+            } else {
+                // Fallback to manual copy
+                copyShareLink(shareUrl);
+            }
+        }
+
+        // Function to reset the share button for generating a new link
+        function resetShareButton() {
+            const shareSection = document.querySelector('.share-section');
+            shareSection.innerHTML = `
+                <button id="shareBtn" class="share-btn">
+                    🔗 Generate Share Link
+                </button>
+                <p style="margin-top: 0.5rem; font-size: 0.9rem; color: #666;">Create a secure link to share your greeting card</p>
+            `;
+            
+            // Re-add event listener
+            setTimeout(() => {
+                const shareBtn = document.getElementById('shareBtn');
+                if (shareBtn) {
+                    shareBtn.addEventListener('click', () => shareGreetingCard(window.lastImageUrl, window.lastFormData, window.lastGeneratedText));
+                }
+            }, 100);
+        }
+
+        // Fallback direct sharing method if the secure sharing API fails
+        function fallbackDirectShare(imageUrl, formData, generatedText) {
             try {
                 // Try to download the image first
                 const downloadLink = document.createElement('a');
