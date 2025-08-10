@@ -2,13 +2,14 @@
 
 ## 📋 Project Overview
 
-A full-stack AI application that generates personalized greeting cards using OpenAI's GPT-5o-mini model.
+A full-stack AI application that generates personalized greeting cards using OpenAI's GPT-4o-mini model and DALL-E 3 for image generation.
 
 ### 🏗️ Architecture
 - **Frontend**: HTML/CSS/JavaScript (GitHub Pages)
 - **Backend**: Flask API (Render)
-- **AI**: OpenAI GPT-5o-mini
+- **AI**: OpenAI GPT-4o-mini + DALL-E 3
 - **Analytics**: Built-in usage tracking
+- **Storage**: GitHub API for persistent data storage
 
 ### 🌐 Live URLs
 - **Production**: https://goodboyagi.github.io/greeting-card-generator/
@@ -21,6 +22,7 @@ A full-stack AI application that generates personalized greeting cards using Ope
 - Python 3.9+
 - Virtual environment: `$VENV` (set your virtual environment path)
 - OpenAI API key in `.env` file
+- GitHub Personal Access Token with repo access
 
 ### Environment Setup
 ```bash
@@ -41,6 +43,7 @@ export VENV="/path/to/your/virtual/environment"
 Edit `index.html`:
 ```javascript
 const DEV_MODE = true;  // Change this for local testing
+const DEBUG_SHARING = true;  // Use dummy images to save DALL-E credits
 ```
 
 #### 2. Start Backend Server
@@ -69,6 +72,7 @@ Frontend runs on: `http://localhost:8000`
 Edit `index.html`:
 ```javascript
 const DEV_MODE = false;  // Change this for production
+const DEBUG_SHARING = false;  // Disable debug mode for production
 ```
 
 #### 2. Deploy
@@ -86,17 +90,18 @@ git push origin main
 
 ```
 greeting-card-generator/
-├── index.html              # Main frontend
+├── index.html              # Main frontend with sharing functionality
 ├── stats.html              # Analytics dashboard
 ├── test.html               # API testing page
 ├── serve_local.py          # Local development server
 ├── render.yaml             # Render deployment config
 ├── backend/
-│   ├── app.py              # Flask backend
+│   ├── app.py              # Flask backend with AI integration
 │   ├── requirements.txt    # Python dependencies
 │   ├── test_api.py         # API testing script
 │   └── usage_stats.json    # Usage analytics (auto-generated)
-└── .env                    # Environment variables (not in git)
+├── .env                    # Environment variables (not in git)
+└── env.example             # Environment variables template
 ```
 
 ## 🔧 Key Features
@@ -107,9 +112,14 @@ greeting-card-generator/
 - Real-time API calls
 - Error handling
 - Loading states
+- **Greeting card sharing with native share API**
+- **Debug mode for local development (saves DALL-E credits)**
 
 ### Backend Features
-- OpenAI integration
+- **OpenAI GPT-4o-mini integration for text generation**
+- **DALL-E 3 integration for image generation**
+- **Secure sharing system with 48-hour expiration**
+- **GitHub storage for persistent shared card data**
 - CORS configuration
 - Usage analytics
 - Error handling
@@ -120,6 +130,14 @@ greeting-card-generator/
 - Success/failure rates
 - Usage by occasion/style
 - Real-time dashboard
+- **GitHub-based persistent storage**
+
+### Sharing Features
+- **Native Web Share API integration**
+- **Secure shareable URLs with 48-hour expiration**
+- **Persistent storage in private GitHub repository**
+- **Automatic cleanup of expired cards**
+- **Viral growth: recipients can create their own cards**
 
 ## 🎯 Adding New Features
 
@@ -164,6 +182,17 @@ greeting-card-generator/
 - **Solution**: Check `.env` file exists and has correct format
 - **Solution**: Verify API key in Render environment variables
 
+#### GitHub Storage Issues
+- **Problem**: Shared cards not persisting
+- **Solution**: Check GitHub token has repo access to both repositories
+- **Solution**: Verify `greeting-card-storage` repo exists and is private
+
+#### Sharing Issues
+- **Problem**: Share button stuck on "Preparing..."
+- **Solution**: Check browser console for errors
+- **Solution**: Verify native share API is supported
+- **Solution**: Test with different browsers/devices
+
 ### Debug Commands
 
 ```bash
@@ -175,6 +204,9 @@ curl https://greeting-card-generator-api.onrender.com/api/health
 
 # Check usage stats
 curl https://greeting-card-generator-api.onrender.com/api/stats
+
+# Debug shared cards (local only)
+curl http://localhost:5001/api/debug/shared-cards
 ```
 
 ## 📊 Monitoring
@@ -189,6 +221,11 @@ curl https://greeting-card-generator-api.onrender.com/api/stats
 - **Logs**: Available in Render dashboard
 - **Metrics**: Request count, response times
 
+### GitHub Storage Monitoring
+- **Stats Repository**: `goodboyagi/greeting-card-generator` (usage statistics)
+- **Storage Repository**: `goodboyagi/greeting-card-storage` (shared cards)
+- **Auto-cleanup**: Expired cards removed after 48 hours
+
 ## 🔐 Security Notes
 
 ### Environment Variables
@@ -196,26 +233,37 @@ curl https://greeting-card-generator-api.onrender.com/api/stats
 - **Production**: Set in Render dashboard
 - **Never commit**: API keys or sensitive data
 
+### GitHub Configuration
+- **Stats Storage**: `GITHUB_TOKEN`, `GITHUB_REPO`, `GITHUB_STATS_FILE`
+- **Shared Cards Storage**: `GITHUB_STORAGE_REPO`, `GITHUB_SHARED_CARDS_FILE`
+- **Token Permissions**: Requires `repo` scope for both repositories
+
 ### CORS Configuration
 - **Local**: Allows `file://` protocol and localhost
 - **Production**: Allows GitHub Pages and custom domain
 - **Security**: Only necessary origins are allowed
 
+### Sharing Security
+- **Card IDs**: Cryptographically secure random generation
+- **Expiration**: Automatic 48-hour cleanup
+- **Access Control**: No password required, but cards expire automatically
+
 ## 🚀 Future Enhancements
 
 ### Potential Features
-- Card templates/designs
-- Image generation with DALL-E
-- Save/share functionality
-- User accounts
-- More occasions and styles
-- Multi-language support
+- **Card templates/designs** (partially implemented with DALL-E 3)
+- **Advanced image generation** with style controls
+- **Save/share functionality** (✅ implemented)
+- **User accounts**
+- **More occasions and styles**
+- **Multi-language support**
+- **Card analytics and tracking**
 
 ### Performance Optimizations
-- Caching responses
-- Rate limiting
-- CDN for static assets
-- Database for analytics
+- **Caching responses** (✅ implemented for shared cards)
+- **Rate limiting**
+- **CDN for static assets**
+- **Database for analytics** (✅ GitHub storage implemented)
 
 ## 📞 Support
 
@@ -224,6 +272,7 @@ curl https://greeting-card-generator-api.onrender.com/api/stats
 - **Local Frontend**: `http://localhost:8000`
 - **Production**: https://goodboyagi.github.io/greeting-card-generator/
 - **Backend API**: https://greeting-card-generator-api.onrender.com
+- **GitHub Storage**: `goodboyagi/greeting-card-storage`
 
 ### Development Commands
 ```bash
@@ -239,7 +288,12 @@ cd $PROJECT_DIR && python serve_local.py
 git add . && git commit -m "Description" && git push origin main
 ```
 
+### Debug Mode
+- **Local Development**: Set `DEBUG_SHARING = true` to use dummy images
+- **Production**: Automatically disabled to ensure real content
+- **DALL-E Credits**: Save during development by using debug mode
+
 ---
 
-**Last Updated**: June 21, 2025
-**Version**: 1.0.0 
+**Last Updated**: August 10, 2025
+**Version**: 2.0.0 - Added AI image generation, sharing system, and GitHub storage 
