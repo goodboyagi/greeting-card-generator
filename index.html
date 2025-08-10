@@ -6,6 +6,26 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
+    
+    <!-- Open Graph Meta Tags for Social Media Sharing -->
+    <meta property="og:title" content="AI Greeting Card Generator - Good Boy AGI">
+    <meta property="og:description" content="Create beautiful, personalized greeting cards using AI-powered text generation and DALL-E image creation. Perfect for birthdays, congratulations, and special occasions!">
+    <meta property="og:image" content="https://goodboyagi.com/greeting-card-generator/assets/og-image.png">
+    <meta property="og:url" content="https://goodboyagi.com/greeting-card-generator/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Good Boy AGI">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="AI Greeting Card Generator - Good Boy AGI">
+    <meta name="twitter:description" content="Create beautiful, personalized greeting cards using AI-powered text generation and DALL-E image creation.">
+    <meta name="twitter:image" content="https://goodboyagi.com/greeting-card-generator/assets/og-image.png">
+    
+    <!-- Additional Meta Tags for Better SEO and Sharing -->
+    <meta name="description" content="Create beautiful, personalized greeting cards using AI-powered text generation and DALL-E image creation. Perfect for birthdays, congratulations, and special occasions!">
+    <meta name="keywords" content="AI, greeting cards, DALL-E, personalized, birthday, congratulations, AI art, text generation">
+    <meta name="robots" content="index, follow">
+    
     <title>Greeting Card Generator - Good Boy AGI (v2.0)</title>
     <style>
         * {
@@ -264,6 +284,40 @@
             border-radius: 10px;
             margin-top: 1rem;
         }
+
+        /* Share button styling */
+        .share-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .share-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .share-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .share-section {
+            text-align: center;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            border: 1px solid rgba(102, 126, 234, 0.1);
+        }
         
         /* Card content styling - moved from inline styles */
         .card-content-inner {
@@ -358,6 +412,7 @@
     <script>
         // Development mode toggle - change this to true for local testing
         const DEV_MODE = false;
+        const DEBUG_SHARING = false; // Set to false to use real DALL-E images, true for dummy image
         const API_BASE = DEV_MODE 
             ? 'http://localhost:5001' 
             : 'https://greeting-card-generator-api.onrender.com';
@@ -447,26 +502,38 @@
             };
 
             try {
-                // Call the deployed Flask backend API
-                const response = await fetch(`${API_BASE}/api/generate-text`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        recipient: data.recipient,
-                        occasion: data.occasion,
-                        style: data.style,
-                        sender: data.sender,
+                let apiResult;
+                
+                if (DEBUG_SHARING) {
+                    // Debug mode: skip API call and use dummy data
+                    console.log('Debug mode: using dummy data instead of API call');
+                    apiResult = {
+                        success: true,
+                        generated_text: `Dear ${data.recipient},\n\nThis is a debug message for ${data.occasion}. In production, this would be AI-generated text.\n\n${getSignature(data.occasion, data.style)}\n${data.sender}`,
+                        generated_image_url: createDummyImage(data.recipient, data.occasion)
+                    };
+                } else {
+                    // Production mode: call the actual API
+                    const response = await fetch(`${API_BASE}/api/generate-text`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            recipient: data.recipient,
+                            occasion: data.occasion,
+                            style: data.style,
+                            sender: data.sender,
                         message: data.message
-                    })
-                });
+                        })
+                    });
 
-                if (!response.ok) {
-                    throw new Error(`API Error: ${response.status}`);
+                    if (!response.ok) {
+                        throw new Error(`API Error: ${response.status}`);
+                    }
+
+                    apiResult = await response.json();
                 }
-
-                const apiResult = await response.json();
                 
                 if (apiResult.success) {
                     // Display the generated text
@@ -487,8 +554,22 @@
                         cardContent.innerHTML += `
                             <div class="generated-image">
                                 <img src="${apiResult.generated_image_url}" alt="Generated greeting card image" onerror="this.parentElement.innerHTML='<div class=\'image-error\'>Failed to load generated image. The text generation was successful!</div>'">
+                                <div class="share-section">
+                                    <button id="shareBtn" class="share-btn">
+                                        📤 Share Greeting Card
+                                    </button>
+                                    <p style="margin-top: 0.5rem; font-size: 0.9rem; color: #666;">Share via email, WhatsApp, or save to your device</p>
+                                </div>
                             </div>
                         `;
+                        
+                        // Add event listener to share button
+                        setTimeout(() => {
+                            const shareBtn = document.getElementById('shareBtn');
+                            if (shareBtn) {
+                                shareBtn.addEventListener('click', () => shareGreetingCard(apiResult.generated_image_url, data, apiResult.generated_text));
+                            }
+                        }, 100);
                     }
                     
                     // Show result
@@ -505,6 +586,166 @@
                 generateBtn.textContent = 'Generate Greeting Card';
             }
         });
+
+        // Function to create a dummy image for debugging (saves DALL-E credits)
+        function createDummyImage(recipient, occasion) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            
+            // Create a simple gradient background
+            const gradient = ctx.createLinearGradient(0, 0, 512, 512);
+            gradient.addColorStop(0, '#667eea');
+            gradient.addColorStop(1, '#764ba2');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 512, 512);
+            
+            // Add text
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 32px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(`Greeting Card for ${recipient}`, 256, 200);
+            ctx.font = '24px Arial';
+            ctx.fillText(`Occasion: ${occasion}`, 256, 250);
+            ctx.font = '18px Arial';
+            ctx.fillText('(Debug Mode - Dummy Image)', 256, 300);
+            
+            return canvas.toDataURL('image/png');
+        }
+
+        // Function to share the greeting card using Web Share API
+        async function shareGreetingCard(imageUrl, formData, generatedText) {
+            // Show loading state on share button
+            const shareBtn = document.getElementById('shareBtn');
+            const originalText = shareBtn.textContent;
+            shareBtn.textContent = 'Preparing...';
+            shareBtn.disabled = true;
+            
+            // Add a safety timeout to restore button if something goes wrong
+            const safetyTimeout = setTimeout(() => {
+                if (shareBtn.textContent === 'Preparing...') {
+                    console.log('Safety timeout: restoring share button');
+                    shareBtn.textContent = originalText;
+                    shareBtn.disabled = false;
+                }
+            }, 10000); // 10 second timeout
+            
+            try {
+
+                // Create share data
+                const shareData = {
+                    title: `Greeting Card for ${formData.recipient}`,
+                    text: `Check out this personalized greeting card I created for ${formData.occasion}!`,
+                    url: 'https://goodboyagi.com/greeting-card-generator/'
+                };
+
+                               // Try to share the image file if Web Share API supports files
+               if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+                   try {
+                       let imageBlob;
+                       
+                       if (DEBUG_SHARING) {
+                           // Use dummy image in debug mode (saves DALL-E credits)
+                           console.log('Debug mode: using dummy image for sharing');
+                           const dummyImageDataUrl = createDummyImage(formData.recipient, formData.occasion);
+                           // Convert data URL to blob
+                           const response = await fetch(dummyImageDataUrl);
+                           imageBlob = await response.blob();
+                       } else {
+                           // Use real DALL-E image
+                           const response = await fetch(imageUrl);
+                           imageBlob = await response.blob();
+                       }
+                       
+                       // Create file object for sharing
+                       const imageFile = new File([imageBlob], 'greeting-card.png', { type: 'image/png' });
+                       
+                       // Try to share with file
+                       const shareDataWithFile = {
+                           ...shareData,
+                           files: [imageFile]
+                       };
+                       
+                       if (navigator.canShare(shareDataWithFile)) {
+                           await navigator.share(shareDataWithFile);
+                           showShareSuccess();
+                           return;
+                       }
+                   } catch (fileShareError) {
+                       console.log('File sharing failed (likely CORS issue), falling back to URL sharing');
+                       // Try URL-only sharing as fallback
+                       try {
+                           await navigator.share(shareData);
+                           showShareSuccess();
+                           return;
+                       } catch (urlShareError) {
+                           console.log('URL sharing also failed, using fallback method');
+                           // Check if it was user cancellation vs actual error
+                           if (urlShareError.name === 'AbortError' || urlShareError.name === 'NotAllowedError') {
+                               console.log('User cancelled or denied sharing');
+                               return; // Don't show error, just restore button
+                           }
+                       }
+                   }
+                   
+                   // If we get here, both file and URL sharing failed
+                   fallbackShare(imageUrl, formData, generatedText);
+               } else {
+                   // Fallback for browsers that don't support Web Share API
+                   fallbackShare(imageUrl, formData, generatedText);
+               }
+            } catch (error) {
+                console.error('Share error:', error);
+                // Fallback to download + copy link
+                fallbackShare(imageUrl, formData, generatedText);
+            } finally {
+                // Clear the safety timeout
+                clearTimeout(safetyTimeout);
+                
+                // Restore share button
+                if (shareBtn) {
+                    shareBtn.textContent = originalText;
+                    shareBtn.disabled = false;
+                }
+            }
+        }
+
+        // Fallback sharing method for unsupported browsers or CORS issues
+        function fallbackShare(imageUrl, formData, generatedText) {
+            try {
+                // Try to download the image first
+                const downloadLink = document.createElement('a');
+                downloadLink.href = imageUrl;
+                downloadLink.download = `greeting-card-${formData.recipient}-${formData.occasion}.png`;
+                downloadLink.target = '_blank'; // Open in new tab if download fails
+                downloadLink.click();
+                
+                // Copy website link to clipboard
+                navigator.clipboard.writeText('https://goodboyagi.com/greeting-card-generator/').then(() => {
+                    showShareSuccess('Image download started! Website link copied to clipboard.');
+                }).catch(() => {
+                    showShareSuccess('Image download started! Visit https://goodboyagi.com/greeting-card-generator/ to create your own.');
+                });
+            } catch (error) {
+                console.log('Download failed, opening image in new tab');
+                // If download fails due to CORS, open image in new tab
+                window.open(imageUrl, '_blank');
+                showShareSuccess('Image opened in new tab! Visit https://goodboyagi.com/greeting-card-generator/ to create your own.');
+            }
+        }
+
+        // Show success message after sharing
+        function showShareSuccess(message = 'Shared successfully!') {
+            const shareBtn = document.getElementById('shareBtn');
+            shareBtn.textContent = '✓ Shared!';
+            shareBtn.style.background = 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)';
+            
+            setTimeout(() => {
+                shareBtn.textContent = '📤 Share Greeting Card';
+                shareBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            }, 2000);
+        }
     </script>
 </body>
 </html>
