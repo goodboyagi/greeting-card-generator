@@ -1,7 +1,51 @@
+# System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Local development
+*.log
+*.tmp
+*.swp
+*.swo
+*~
+
+# Local images (user-generated content)
+greeting-card-backend/images/*.jpg
+greeting-card-backend/images/*.jpeg
+greeting-card-backend/images/*.png
+
+# Keep the images directory structure but ignore contents
+greeting-card-backend/images/.gitkeep
+
 # Python
 __pycache__/
 *.py[cod]
-.env
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
 
-# Usage statistics (should not be committed)
-usage_stats.json
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
