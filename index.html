@@ -1224,9 +1224,17 @@
                     
                     // Add generated image if available
                     if (apiResult.generated_image_url) {
+                        // Handle local image filenames vs full URLs
+                        let imageUrl = apiResult.generated_image_url;
+                        if (imageUrl.startsWith('card_')) {
+                            // This is a local filename, construct the proper URL
+                            imageUrl = `${API_BASE}/api/image/${imageUrl}`;
+                            console.log(`[IMAGE STORAGE] Converted local filename to URL: ${imageUrl}`);
+                        }
+                        
                         cardContent.innerHTML += `
                             <div class="generated-image">
-                                <img src="${apiResult.generated_image_url}" alt="Generated greeting card image" onerror="this.parentElement.innerHTML='<div class=\'image-error\'>Failed to load generated image. The text generation was successful!</div>'">
+                                <img src="${imageUrl}" alt="Generated greeting card image" onerror="this.parentElement.innerHTML='<div class=\'image-error\'>Failed to load generated image. The text generation was successful!</div>'">
                                 <div class="share-section">
                                     <button id="shareBtn" class="share-btn">
                                         🔗 Generate Share Link
