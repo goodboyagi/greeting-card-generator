@@ -2,12 +2,12 @@
   "total_requests": 112,
   "successful_requests": 111,
   "failed_requests": 1,
-  "last_request": "2025-08-12T06:48:53.472099",
+  "last_request": "2025-08-12T06:53:50.560103",
   "requests_by_occasion": {
-    "congratulations": 79,
+    "congratulations": 78,
     "birthday": 4,
     "Eid Mubarak": 1,
-    "anniversary": 10,
+    "anniversary": 11,
     "wedding": 2,
     "graduation": 1,
     "sympathy": 8,
@@ -17,7 +17,7 @@
   "requests_by_style": {
     "funny": 42,
     "friendly": 18,
-    "formal": 47,
-    "romantic": 5
+    "formal": 46,
+    "romantic": 6
   }
 }
