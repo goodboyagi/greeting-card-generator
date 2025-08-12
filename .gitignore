@@ -14,6 +14,9 @@ Thumbs.db
 *.swo
 *~
 
+# Backend directory (deployed separately on Render)
+greeting-card-backend/
+
 # Local images (user-generated content)
 greeting-card-backend/images/*.jpg
 greeting-card-backend/images/*.jpeg
