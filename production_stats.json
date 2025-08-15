@@ -1,8 +1,8 @@
 {
-  "total_requests": 113,
-  "successful_requests": 112,
+  "total_requests": 112,
+  "successful_requests": 111,
   "failed_requests": 1,
-  "last_request": "2025-08-15T23:21:28.272513",
+  "last_request": "2025-08-15T23:22:38.287341",
   "requests_by_occasion": {
     "congratulations": 78,
     "birthday": 4,
@@ -13,11 +13,11 @@
     "sympathy": 8,
     "get_well": 1,
     "holiday": 6,
-    "Haircut": 2
+    "Haircut": 1
   },
   "requests_by_style": {
     "funny": 42,
-    "friendly": 19,
+    "friendly": 18,
     "formal": 47,
     "romantic": 5
   }
